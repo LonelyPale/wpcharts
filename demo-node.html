@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<div id="root"></div>
+<script>
+    let ids = "AD0400BY3MX3022";
+    let time = "";
+    let startT = "2017-08-21";
+    let endT = "2019-08-21";
+    let phy_json = '[{"COMP01":"频模(Hz²/1000)","COMP08":"温度(℃)","COMP09":"相对位移(mm)","COMP10":"绝对位移(mm)"}]';
+    //let phy_json = '[{"COMP10":"应力"}]';
+    let requestData = {
+        physical:phy_json,
+        ids:ids,
+        dateNum:time,
+        starttime:startT,
+        endtime:endT,
+
+        //callback:'http://localhost:8060/',
+    };
+
+    let url = 'http://127.0.0.1:8888/wpcharts/hydrograph/svg';
+    let request = {
+        method: 'POST',
+        headers: {
+            //'Content-Type': 'application/json'
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: JSON.stringify(requestData),
+    };
+
+    /**/
+    fetch(url, request).then((response)=>{
+        return response.text();
+    }).then((data)=>{
+        console.log(data);
+    }).catch((e)=>{
+        console.log(e);
+    });
+
+
+    /*
+    wpcharts(function () {
+        var hydrograph = wpcharts.init("#root");
+        hydrograph.setOption({
+            type: 'hydrograph',
+            url: "http://127.0.0.1:8060/business/basic/datamanage/processLine",
+            request: {
+                mode: 'cors',
+                body: requestData
+            }
+        });
+    });
+     */
+
+</script>
+</body>
+</html>

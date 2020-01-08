@@ -1,0 +1,47 @@
+{
+  "name": "wpcharts",
+  "version": "1.1.0",
+  "description": "water project charts",
+  "main": "index.js",
+  "scripts": {
+    "server": "live-server --port=8080 --no-browser --mount=/wpcharts:.",
+    "clean": "rm -rf ./build/*",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm run build-rollup-ts && npm run build-rollup-ts-load && npm run build-other && npm run build-rollup-cjs",
+    "build:all": "npm run clean && npm run build-ts",
+    "build-other": "node ./tools/outputOtherFiles.js",
+    "build-babel": "babel src -d build --source-maps",
+    "build-rollup": "rollup --config rollup.config.js",
+    "build-rollup-ts": "rollup --config rollup.config-ts.js",
+    "build-rollup-ts-load": "rollup --config rollup.config-ts-load.js",
+    "build-rollup-cjs": "rollup --config rollup.config-cjs.js",
+    "build-rollup-es": "rollup --config rollup.config-es.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/cli": "^7.6.0",
+    "@babel/core": "^7.6.0",
+    "@babel/node": "^7.6.1",
+    "@babel/plugin-external-helpers": "^7.2.0",
+    "@babel/preset-env": "^7.6.0",
+    "@babel/preset-es2015": "^7.0.0-beta.53",
+    "live-server": "^1.2.1",
+    "mockjs": "^1.1.0",
+    "rollup": "^1.21.2",
+    "rollup-plugin-babel": "^4.3.3",
+    "rollup-plugin-json": "^4.0.0",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-typescript": "^1.0.1",
+    "tslib": "^1.10.0",
+    "tslint": "^5.20.0",
+    "typescript": "^3.7.3"
+  },
+  "dependencies": {
+    "@types/d3": "^5.7.2",
+    "d3": "^5.12.0",
+    "layui-src": "^2.5.5"
+  },
+  "types": "./lib/layui-v2.5.5/layui/index.d.ts"
+}

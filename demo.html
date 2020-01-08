@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>wpcharts demo</title>
+
+    <!--
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script src="/wpcharts/lib/browser-polyfill.min.js" charset="utf-8"></script>
+    <script src="/wpcharts/lib/bluebird.min.js" charset="utf-8"></script>
+    <script src="/wpcharts/lib/fetch.umd.js" charset="utf-8"></script>
+
+    <link rel="stylesheet" href="/wpcharts/dist/wpcharts.css" type="text/css"/>
+    <script src="/d3/d3-v5.9.7/d3.js" charset="utf-8"></script>
+    -->
+
+    <script src="/wpcharts/dist/wpcharts.js?v=1"></script>
+</head>
+
+<body>
+
+<div id="root4"></div>
+<div id="root3"></div>
+<div id="root2-4"></div>
+<div id="root2-3"></div>
+<div id="root2-2"></div>
+<div id="root2-1"></div>
+<div id="root2"></div>
+<div id="root1"></div>
+
+<!--
+<svg version="1.1" baseProfile="full" width="100%" height="200" viewBox="0 0 1020 200"
+     xmlns="http://www.w3.org/2000/svg" style="border: 1px solid red" id="container"
+     onmousemove="handleMouseMove2(event)" onclick="handleClick(event)" onmouseout="hiddenMouseMovePointer()">
+    <g transform="translate(10,10)">
+
+        <rect id="rect" x="0" width="1000" height="180" fill="#33546F" />
+        <line x1="100" x2="100" y1="0" y2="90%" stroke="black" id="line" />
+
+        <g id="mouseMovePointer" style="visibility:hidden;">
+            <path fill="red" d="M0 0 L5 -8 L-5 -8 z" />
+            <path fill="red" d="M0 180 L5 188 L-5 188 z" />
+        </g>
+    </g>
+</svg>
+-->
+
+</body>
+
+<script type="text/javascript">
+    //wpcharts.config.debug = true;
+
+    wpcharts(function () {
+        var hydrograph = wpcharts.init("#root1");
+        hydrograph.setOption({
+            type: 'hydrograph',
+            url: "/wpcharts/data/sky2-data.json",
+            request: {
+                method: 'GET',
+                //body: requestData
+            }
+        });
+    });
+
+    /**/
+    wpcharts(function () {
+        var distribution = wpcharts.init("#root2");
+        distribution.setOption({
+            type: 'distribution',
+            url: "/wpcharts/data/distribution-2.json",
+            request: {
+                method: 'GET',
+                //body: requestData
+            }
+        });
+
+        var distribution_21 = wpcharts.init("#root2-1");
+        distribution_21.setOption({
+            type: 'distribution',
+            url: "/wpcharts/data/distribution-2.json",
+            isHorizontal: false,
+            defaultDraw: true,
+            request: {
+                method: 'GET',
+                //body: requestData
+            }
+        });
+
+        var distribution_22 = wpcharts.init("#root2-2");
+        distribution_22.setOption({
+            url: "/wpcharts/data/distribution-clinometer.json",
+            request: {
+                method: 'GET',
+            },
+            type: "distribution",
+            isHorizontal: false,//垂直图
+        });
+
+        var distribution_23 = wpcharts.init("#root2-3");
+        distribution_23.setOption({
+            url: "/wpcharts/data/distribution-background-common.json?v=1",
+            request: {
+                method: 'GET',
+            },
+            type: "distribution-background",
+            isHorizontal: true,//图
+        });
+
+        var distribution_24 = wpcharts.init("#root2-4");
+        distribution_24.setOption({
+            url: "/wpcharts/data/distribution-background-osmotic.json?v=1",
+            request: {
+                method: 'GET',
+            },
+            type: "distribution-background",
+            isHorizontal: true,//图
+        });
+    });
+
+    wpcharts(function () {
+        var correlation = wpcharts.init("#root3");
+        correlation.setOption({
+            url:"/wpcharts/data/correlation.json?v=4",
+            request: {
+                method: 'GET',
+            },
+            type: "correlation"
+        });
+    });
+
+    wpcharts(function () {
+        var statistical = wpcharts.init("#root4");
+        statistical.setOption({
+            url:"/wpcharts/data/statistical.json?v=1",
+            request: {
+                method: 'GET',
+            },
+            type: "statistical"
+        });
+    });
+
+</script>
+
+<!--
+<script>
+    function handleMouseMove1(evt) {
+        const width = document.getElementById('container').scrollWidth;
+        let x = event.offsetX / width * 1020 - 10;
+
+        if (x > 1000) {
+            x = 1000;
+        } else if (x < 0) {
+            x = 0;
+        }
+
+        document.getElementById('line').setAttribute('x1', x);
+        document.getElementById('line').setAttribute('x2', x);
+    }
+
+    function handleClick(evt) {
+        const x = transformPoint(evt);
+
+        hiddenMouseMovePointer();
+
+        document.getElementById('line').setAttribute('x1', x);
+        document.getElementById('line').setAttribute('x2', x);
+    }
+
+    function handleMouseMove2(evt) {
+        const x = transformPoint(evt);
+
+        const p = document.getElementById('mouseMovePointer');
+        p.setAttribute('transform',`translate(${x},0)`);
+        p.style.visibility = 'visible';
+    }
+
+    function hiddenMouseMovePointer() {
+        const p = document.getElementById('mouseMovePointer');
+        p.style.visibility = 'hidden';
+    }
+
+    function transformPoint(evt) {
+        const svg = document.getElementById('container');
+        const width = svg.scrollWidth;
+
+        const rect = document.getElementById('rect');
+        const ctm = rect.getScreenCTM();
+
+        const pt = svg.createSVGPoint();
+
+        pt.x = evt.clientX;
+        pt.y = evt.clientY;
+
+        const mf = pt.matrixTransform(ctm.inverse());
+
+        let x = mf.x;
+
+        if (x > 1000) {
+            x = 1000;
+        } else if (x < 0) {
+            x = 0;
+        }
+
+        return x;
+    }
+
+</script>
+-->
+
+</html>

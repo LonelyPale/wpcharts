@@ -1,0 +1,12 @@
+1、过程线多 y 轴，画多幅图，用选项控制。
+2、垂直过程线
+
+tail -f ../logs/catalina.out
+ps -ef | grep tomcat
+kill -9 14604
+
+
+
+
+
+

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="/wpcharts/dist/wpcharts.js"></script>
+</head>
+<body>
+<div id="root1"></div>
+<br><br><br><br>
+<div id="root2"></div>
+<script type="text/javascript">
+    wpcharts(function () {
+        var hydrograph1 = wpcharts.init("#root1");
+        hydrograph1.setOption({
+            type: 'hydrograph',
+            url: "/wpcharts/data/sky2-data.json",
+            request: {
+                method: 'GET',
+                //body: requestData
+            },
+            view: {
+                width: 600,//宽度
+                height: 300,//高度
+            }
+        });
+
+        var hydrograph2 = wpcharts.init("#root2");
+        hydrograph2.setOption({
+            type: 'hydrograph',
+            url: "/wpcharts/data/sky2-data.json",
+            request: {
+                method: 'GET',
+                //body: requestData
+            },
+            view: {
+                width: 600,  //宽度
+                height: 300, //高度
+                top: 100,    //图形的上空间
+                bottom: 50,  //图形的下空间
+                left: 50,    //图形的左空间
+                right: 50,   //图形的右空间
+            },
+            style: {
+                rotate: 90,//旋转角度
+            }
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+
+svg {shape-rendering: crispEdges;}
+
+.menu {fill: #ecedec;}
+.menu .layout {stroke: #aaaaaa;stroke-width: 0.5;shape-rendering: geometricPrecision;}
+.menu-item:link {}
+.menu-item:visited {}
+.menu-item:hover {fill: cornflowerblue;}
+.menu-item:active {}
+.menu-item>text {fill: black; font-size: 15px;}
+.menu-item:hover>text {fill: white;}
+.menu-item>path {stroke: black; stroke-width: 2}
+.menu-item:hover>path {stroke: white;}
+.menu-item:hover>.icon-triangle {fill: white}
+.menu-separator line {stroke: lightgray; stroke-width: 2;}
+
+.icon-hook {fill: none;}
+.icon-triangle {fill: black}
+
+.tooltips text {fill: white; font-size: 13px;}
+
+
+/* bug:
+node sharp 不能正确处理 CSS 派生选择器，所以只能使用单独的 class，
+且 <style></style> 必须放在 svg 文件的头部才能正确作用，在浏览器中不存在这些问题。
+*/
+.axis-text {fill: black; font-size: 11px; font-family: sans-serif}
+
+.tick {font-family: sans-serif; font-size: 11px; text-anchor: middle;}
+.tick-line {fill: none; stroke: black; stroke-width: 1px; shape-rendering: crispEdges;}
+.tick-text {font-family: sans-serif; font-size: 11px; text-anchor: middle;}
+
+.legend-rect {fill: none; stroke: black; stroke-width: 1px; shape-rendering: crispEdges;}
+.legend-line {fill: none; stroke-width: 1px; shape-rendering: crispEdges;}
+.legend-text {font-family: sans-serif; font-size: 11px;}
+
+.line {fill: none; stroke-width: 1; shape-rendering: geometricPrecision;}
+.point {shape-rendering: geometricPrecision;}
+.warning-value-line {fill: none; stroke-width: 2; opacity: 0.9;}/* stroke: red; */
+
+.legend-1 {}
+.legend-2 {}
+.legend-3 {}
+.legend-4 {}
+.legend-5 {}
+
+/*
+.menu text{fill: black;}
+
+shape-rendering: auto;
+shape-rendering: optimizeSpeed;
+shape-rendering: crispEdges;
+shape-rendering: geometricPrecision;
+
+*/
