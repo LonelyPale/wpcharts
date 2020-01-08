@@ -39,10 +39,10 @@ export class Svg extends SvgObject {
             let svgHeight = this.attr('height');
 
             //右击位置在 right 和 bottom 时(不足一个身位)，当空间不够会隐藏超出的部分，则向左或向上移动一个身位。
-            if(x + menuWidth > svgWidth) {
+            if (x + menuWidth > svgWidth) {
                 x -= menuWidth;
             }
-            if(y + menuHeight > svgHeight) {
+            if (y + menuHeight > svgHeight) {
                 y -= menuHeight;
             }
 
