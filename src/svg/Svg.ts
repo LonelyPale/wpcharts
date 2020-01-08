@@ -25,10 +25,28 @@ export class Svg extends SvgObject {
             d3.event.preventDefault();
 
             let event = d3.event;
+
+            //mouse 位置
             let x = event.offsetX || 0;//clientX
             let y = event.offsetY || 0;//clientY
 
-            menu.attr('transform', `translate(${x}, ${y})`);//# todo: 右击位置在right 和 bottom时，当空间不够会隐藏超出的部分
+            //menu 宽高
+            let menuWidth = menu.getView().width;
+            let menuHeight = menu.getView().height;
+
+            //svg 宽高
+            let svgWidth = this.attr('width');
+            let svgHeight = this.attr('height');
+
+            //右击位置在 right 和 bottom 时(不足一个身位)，当空间不够会隐藏超出的部分，则向左或向上移动一个身位。
+            if(x + menuWidth > svgWidth) {
+                x -= menuWidth;
+            }
+            if(y + menuHeight > svgHeight) {
+                y -= menuHeight;
+            }
+
+            menu.attr('transform', `translate(${x}, ${y})`);
             menu.show();
         });
         return this;
