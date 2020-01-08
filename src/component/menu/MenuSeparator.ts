@@ -3,12 +3,13 @@ import {Component} from "../Component";
 import {View} from "../../view/View";
 import {Rect} from "../../svg/Rect";
 import {Line} from "../../svg/Line";
+import {MenuDefaultWidth} from "./MenuConstants";
 
 export class MenuSeparator extends Component {
 
     public static readonly ClassName: string = 'menu-separator';
 
-    static readonly Width = 128;
+    static readonly Width = MenuDefaultWidth - 1;
     static readonly Height = 10;
 
     constructor() {

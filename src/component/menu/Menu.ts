@@ -5,6 +5,7 @@ import {MenuSeparator} from "./MenuSeparator";
 import {MenuItem} from "./MenuItem";
 import {View} from "../../view/View";
 import {Rect} from "../../svg/Rect";
+import {MenuDefaultWidth, MenuDefaultHeight} from "./MenuConstants";
 
 export class Menu extends Component {
 
@@ -17,8 +18,8 @@ export class Menu extends Component {
         this.setView({
             x: 0,
             y: 0,
-            width: 129,
-            height: 0,
+            width: MenuDefaultWidth,
+            height: MenuDefaultHeight,
             top: 5,
             right: 0.5,
             bottom: 5,

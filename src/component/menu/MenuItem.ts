@@ -5,6 +5,7 @@ import {View} from "../../view/View";
 import {Text} from "../../svg/Text";
 import {Rect} from "../../svg/Rect";
 import {Path} from "../../svg/Path";
+import {MenuDefaultWidth} from "./MenuConstants";
 
 type MenuItemType = 'normal' | 'check' | 'menu';
 
@@ -19,7 +20,7 @@ export class MenuItem extends Component {
 
     public static readonly ClassName: string = 'menu-item';
 
-    static readonly Width = 128;
+    static readonly Width = MenuDefaultWidth - 1;
     static readonly Height = 22;
 
     private menu!: SvgObject;
@@ -34,7 +35,7 @@ export class MenuItem extends Component {
         super.append(svgObject);
         if (svgObject.getClassName() === 'menu') {
             this.menu = svgObject;
-            this.menu.transform('translate(113, -16)');
+            this.menu.transform(`translate(${MenuItem.Width - 16}, -16)`);
         }
         return svgObject;
     }
@@ -47,7 +48,7 @@ export class MenuItem extends Component {
         let layout = new Rect({width: width, height: height});
         this.append(layout);
 
-        let text = new Text().setView({width: 100});
+        let text = new Text().setView({width: MenuItem.Width - 30});
         this.append(text).text(this.property.text);
 
         if (this.property.type === 'menu') {
