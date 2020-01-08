@@ -4,7 +4,8 @@
   "description": "water project charts",
   "main": "index.js",
   "scripts": {
-    "server": "live-server --port=8080 --no-browser --mount=/wpcharts:.",
+    "server": "node server.js",
+    "server:live-server": "live-server --port=8080 --no-browser --mount=/wpcharts:.",
     "clean": "rm -rf ./build/*",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm run build-rollup-ts && npm run build-rollup-ts-load && npm run build-other && npm run build-rollup-cjs",
