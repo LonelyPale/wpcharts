@@ -210,6 +210,53 @@ export class Correlation extends Chart {
         let {menu: rootMenu} = this;
         rootMenu.append(new MenuSeparator());
 
+        //使用 d3.polygonHull 计算凸包(可以包含重复的点，能正确计算)
+        rootMenu.append(new MenuItem({
+            text: '包络图',
+            action() {
+                console.log("包络图");
+
+                let {modelMap, data, xAxisName, yAxisName} = self;
+
+                let scaleX = modelMap[xAxisName].scale;
+                let scaleY = modelMap[yAxisName].scale;
+
+                let scatterDataList = data.scatterDataList;
+                let points: Array<[number, number]> = [];
+
+                for (let i = 0, len = scatterDataList.length; i < len; i++) {
+                    let item = scatterDataList[i];
+                    let valueX = scaleX(parseFloat(item.valueX));
+                    let valueY = scaleY(parseFloat(item.valueY));
+                    points.push([valueX, valueY]);
+                }
+
+                let pointsConvexHull: Array<[number, number]> | null = d3.polygonHull(points);
+
+                let lineGenerator = d3.line()
+                    .x(function (d: [number, number]) {
+                        return (d[0]);
+                    })
+                    .y(function (d: [number, number]) {
+                        return (d[1]);
+                    });
+
+                if (pointsConvexHull && pointsConvexHull.length > 0) {
+                    let color = '#FF9966';// #FFFF00 #FF9966 #FF9999
+                    self.pointsComponent.append(new Path({
+                        d: <string>lineGenerator(pointsConvexHull),
+                        fill: color,
+                        stroke: color,
+                        'stroke-width': 1,
+                        'fill-opacity': 0.5,
+                    }));
+                }
+            }
+        }));
+
+        /*
+        //使用自定义的算法计算凸包(不能有重复的点，否则会计算错误)
+        //存在问题，某些情况下计算结果不正确，如：测点Ec2-2土压力与水位相关图
         rootMenu.append(new MenuItem({
             text: '包络图',
             action() {
@@ -230,7 +277,7 @@ export class Correlation extends Chart {
                     let valueX = scaleX(parseFloat(item.valueX));
                     let valueY = scaleY(parseFloat(item.valueY));
                     let index = valueX + "-" + valueY;
-                    if (!pointsMap[index]) {
+                    if (!pointsMap[index]) {//处理重复的点
                         points.push(new Point(valueX, valueY));
                         pointsMap[index] = 1;
                     }
@@ -258,6 +305,7 @@ export class Correlation extends Chart {
                 }
             }
         }));
+        */
 
     }
 
