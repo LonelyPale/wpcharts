@@ -3,8 +3,8 @@ import {Model, ModelType} from "./Model";
 
 export class OrdinalModel extends Model<string> {
 
-    constructor(name: string, type: ModelType, data: string[] = []) {
-        super(name, type, data);
+    constructor(name: string, fieldName: string, type: ModelType, data: string[] = []) {
+        super(name, fieldName, type, data);
         this.domain = data;
         this.tickValues = data;
     }

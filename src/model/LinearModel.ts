@@ -7,8 +7,8 @@ export class LinearModel extends Model<number> {
     minNice!: number;
     maxNice!: number;
 
-    constructor(name: string, type: ModelType, data: number[] = []) {
-        super(name, type, data);
+    constructor(name: string, fieldName: string, type: ModelType, data: number[] = []) {
+        super(name, fieldName, type, data);
     }
 
     init(): void {

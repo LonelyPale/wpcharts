@@ -562,8 +562,8 @@ export class TimeModel extends Model<Date> {
     time_level!: string;
     time_group: any;
 
-    constructor(name: string, type: ModelType, data: Date[] = []) {
-        super(name, type, data);
+    constructor(name: string, fieldName: string, type: ModelType, data: Date[] = []) {
+        super(name, fieldName, type, data);
     }
 
     init(): void {

@@ -3,8 +3,9 @@ export type ModelType = 'horizontal' | 'vertical';
 export abstract class Model<T extends number | string | Date> {
 
     name: string;
-    data: T[];
+    fieldName: string;
     type: ModelType;
+    data: T[];
 
     min!: T;
     max!: T;
@@ -18,8 +19,9 @@ export abstract class Model<T extends number | string | Date> {
     tickPadding: number = 0;
     tickValues!: T[]; //#刻度值范围
 
-    protected constructor(name: string, type: ModelType, data: T[] = []) {
+    protected constructor(name: string, fieldName: string, type: ModelType, data: T[] = []) {
         this.name = name;
+        this.fieldName = fieldName;
         this.type = type;
         this.data = data;
     }
