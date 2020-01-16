@@ -21,10 +21,12 @@ export class Svg extends SvgObject {
     contextmenu(menu: Menu): this {
         this.append(menu);
         this.on('click', () => menu.hide());
-        this.on("contextmenu", () => {
-            d3.event.preventDefault();
+        this.on('contextmenu', () => {
+            //console.log('contextmenu');
+            d3.event.preventDefault(); //阻止冒泡
 
             let event = d3.event;
+            if(event.ctrlKey || event.shiftKey) return; //按下 ctrl 或 shift 时不显示右键菜单
 
             //mouse 位置
             let x = event.offsetX || 0;//clientX

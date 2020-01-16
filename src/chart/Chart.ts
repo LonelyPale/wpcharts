@@ -588,13 +588,15 @@ export abstract class Chart implements IChart {
 
         //鼠标移入
         rect.on('mouseover', () => {
+            //console.log("event: mouseover");
             d3.event.preventDefault();
             hline.show();
             vline.show();
         });
 
         //鼠标移出
-        rect.on('museout', () => {
+        rect.on('mouseout', () => {
+            //console.log("event: mouseout");
             d3.event.preventDefault();
             hline.hide();
             vline.hide();
@@ -630,6 +632,7 @@ export abstract class Chart implements IChart {
             if(this.state.eventType === ZoomEvent){
                 console.log('startPosition', startPosition);
                 console.log('endPosition', endPosition);
+                console.log('d3.event', d3.event);
             }else if(this.state.eventType === BrushEvent){
                 //# 触发刷子框选事件
                 this.svg.dispatch(BrushEvent, {bubbles: false, cancelable: false, detail: {startPosition, endPosition}});
@@ -652,21 +655,23 @@ export abstract class Chart implements IChart {
                 if (this.state.eventType === ZoomEvent) {
 
                 } else if(this.state.eventType === BrushEvent) {//# brush 选择, 显示矩形框
-                    let [sx, sy] = startPosition;
-                    let w = Math.abs(x - sx);
-                    let h = Math.abs(y - sy);
-                    let mx, my;
-                    if (x > sx) {
-                        mx = sx;
-                    } else {
-                        mx = sx - w;
+                    if(startPosition) {
+                        let [sx, sy] = startPosition;
+                        let w = Math.abs(x - sx);
+                        let h = Math.abs(y - sy);
+                        let mx, my;
+                        if (x > sx) {
+                            mx = sx;
+                        } else {
+                            mx = sx - w;
+                        }
+                        if (y > sy) {
+                            my = sy;
+                        } else {
+                            my = sy - h;
+                        }
+                        brushRect.attr({width: w, height: h, x: mx, y: my}).show();
                     }
-                    if (y > sy) {
-                        my = sy;
-                    } else {
-                        my = sy - h;
-                    }
-                    brushRect.attr({width: w, height: h, x: mx, y: my}).show();
                 } else if (this.state.eventType === TranslationEvent) {
 
                 }
