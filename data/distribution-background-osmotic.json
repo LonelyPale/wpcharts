@@ -4989,7 +4989,7 @@
       969.761353
     ]
   ],
-  "imageFile": "http://192.168.1.25:8082/wpcharts/dist/image/带背景渗压分布图底图.jpg",
+  "imageFile": "http://127.0.0.1:8080/wpcharts/dist/image/带背景渗压分布图底图.jpg",
   "imageWidth": 3500.0,
   "imageHeight": 1200.0,
   "title": null,

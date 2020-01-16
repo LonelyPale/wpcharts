@@ -5,6 +5,8 @@ tail -f ../logs/catalina.out
 ps -ef | grep tomcat
 kill -9 14604
 
+new
+1、无数据时，绘制 title、图例、图外框
 
 
 

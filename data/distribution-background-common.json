@@ -44,7 +44,7 @@
   "baseElev": 0.0,
   "baseElevCoordY": 0.0,
   "dataYList": null,
-  "imageFile": "http://192.168.1.25:8082/wpcharts/dist/image/带背景通用分布图底图.jpg",
+  "imageFile": "http://127.0.0.1:8080/wpcharts/dist/image/带背景通用分布图底图.jpg",
   "imageWidth": 1667.0,
   "imageHeight": 962.0,
   "title": "羑河渠道倒虹吸出口渐变段垂直位移分布图",

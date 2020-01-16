@@ -14,6 +14,7 @@ import {lately} from "../util/array";
 import {BrushEvent, TooltipsEvent} from "../event/EventTypes";
 import {View} from "../view/View";
 import {LineObject, LineObjectTag} from "../object/LineObject";
+import {TimeModelName, TimeFieldName} from "../constant";
 
 export class Hydrograph extends Chart {
 
@@ -59,7 +60,7 @@ export class Hydrograph extends Chart {
         }
 
         let usedData = this.data;
-        modelMap['time'] = new TimeModel('time', 'horizontal');
+        modelMap[TimeModelName] = new TimeModel(TimeModelName, TimeFieldName, 'horizontal');
 
         //只处理12根线
         for (let i = 0, i_len = usedData.ObservLineList.length < 12 ? usedData.ObservLineList.length : 12; i < i_len; i++) {
@@ -75,7 +76,7 @@ export class Hydrograph extends Chart {
                 if (!model) {
                     //只显示4个物理量,加上时间共5个.
                     if (Object.keys(modelMap).length < 5) {
-                        modelMap[unit] = new LinearModel(unit, 'vertical');
+                        modelMap[unit] = new LinearModel(unit, 'Value', 'vertical');
                     } else {
                         continue;
                     }
@@ -108,7 +109,7 @@ export class Hydrograph extends Chart {
         let {width, height} = this.gridComponent.getView();
         let {action, table, pointIdMap, modelMap, lineMap, cache, legendManager, reverseAxis, initReverse} = this;
 
-        if (action === 'reset') modelMap['time'] = new TimeModel('time', 'horizontal');
+        if (action === 'reset') modelMap[TimeModelName] = new TimeModel(TimeModelName, TimeFieldName, 'horizontal');
 
         //# 初始化全局索引 1
         let rows = table.getRows();
@@ -125,7 +126,7 @@ export class Hydrograph extends Chart {
             if (action === 'reset') {
                 if (!lineMap[id]) {
                     if (!model) {
-                        modelMap[unit] = new LinearModel(unit, 'vertical');
+                        modelMap[unit] = new LinearModel(unit, 'Value', 'vertical');
                     }
                     lineMap[id] = new LineObject(pointId, unit, legend);//#初始化线
                 }
@@ -150,15 +151,17 @@ export class Hydrograph extends Chart {
         for (let line of Object.values(lineMap)) {
             let {pointId, unit, legend, id} = line;
             line.data = table.select(`PointId='${pointId}' and Unit='${unit}' and Legend='${legend}' and Value!='-99'`);
-            line.model = modelMap[unit];
+            line.table = table;
             line.legendObject = legendManager.add(id);
+            line.xModel = modelMap[TimeModelName];
+            line.yModel = modelMap[unit];
             if(line.data.length === 0) delete lineMap[id];
         }
 
         //# 初始化模型 3
         for (let model of Object.values(modelMap)) {
-            if (model.name === 'time') {
-                model.data = table.columns('SuvDate');
+            if (model.name === TimeModelName) {
+                model.data = table.columns(TimeFieldName);
                 model.range = [0, width];
             } else {
                 let rowData = table.select(`Unit='${model.name}'`);
@@ -232,68 +235,17 @@ export class Hydrograph extends Chart {
     }
 
     protected initLines(): void {
-        let {lineMap, modelMap, table} = this;
-        let {time: {scale: scaleX}} = modelMap;
-
+        let {lineMap, linesComponent} = this;
         for (let line of Object.values(lineMap)) {
-            let {data, model: {scale: scaleY}, legendObject} = line;
-            let lineGenerator = null;
-
-            if (data.length === 0) continue;//跳过没有数据的线
-
-            //用闭包保存住当前循环的i的值。
-            (function (scaleY) {
-                lineGenerator = d3.line()
-                    .x(function (d: any, index: number, data: any[]) {
-                        //console.log(d, index, data);
-                        return scaleX(table.field('SuvDate', d));
-                    })
-                    .y(function (d: any, index: number, data: any[]) {
-                        return scaleY(table.field('Value', d));
-                    });
-            })(scaleY);
-
-            this.linesComponent.append(new Path({d: <string>lineGenerator(data), stroke: legendObject.color, class: 'line'}));
+           line.drawLine(linesComponent);
         }
-
     }
 
     protected initPoints(): void {
-        let {lineMap, modelMap, table} = this;
-        let {time: {scale: scaleX}} = modelMap;
-
+        let {lineMap, pointsComponent} = this;
         for (let line of Object.values(lineMap)) {
-            let {data, model: {scale: scaleY}, legendObject} = line;
-
-            let pointsLength = data.length;
-            let pointsSpace = Math.floor(data.length / 10);
-            let point, j, x, y;
-            if (pointsLength <= 12) {
-                //显示所有的点
-                for (j = 0; j < pointsLength; j++) {
-                    point = data[j];
-                    x = scaleX(table.field('SuvDate', point));
-                    y = scaleY(table.field('Value', point));
-                    legendObject.draw(this.pointsComponent, x, y);
-                }
-            } else {
-                //显示最多12个点
-                for (j = 1; j <= 10; j++) {
-                    if (pointsLength === (j * pointsSpace)) {
-                        //能整除的情况，最后一个点会重合，如：20，300
-                        point = data[j * pointsSpace - Math.floor(pointsSpace / 2)];
-                    } else {
-                        point = data[j * pointsSpace];
-                    }
-                    x = scaleX(table.field('SuvDate', point));
-                    y = scaleY(table.field('Value', point));
-                    legendObject.draw(this.pointsComponent, x, y);
-                }
-                legendObject.draw(this.pointsComponent, scaleX(table.field('SuvDate', data[0])), scaleY(table.field('Value', data[0])));//第一个点
-                legendObject.draw(this.pointsComponent, scaleX(table.field('SuvDate', data[pointsLength - 1])), scaleY(table.field('Value', data[pointsLength - 1])));//最后一个点
-            }
+            line.drawPoint(pointsComponent);
         }
-
     }
 
     protected initEvent() {

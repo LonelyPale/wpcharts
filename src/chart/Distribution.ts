@@ -14,6 +14,7 @@ import {G} from "../svg/G";
 import {TooltipsEvent} from "../event/EventTypes";
 import {lately} from "../util/array";
 import {View} from "../view/View";
+import {TimeFieldName, TimeModelName} from "../constant";
 
 export class Distribution extends Chart {
 
@@ -128,17 +129,17 @@ export class Distribution extends Chart {
         let {width, height} = this.gridComponent.getView();
 
         //# 初始化模型
-        modelMap['time'] = new TimeModel('time', 'horizontal', table.columns('SuvDate'));
-        modelMap['time'].range = isHorizontal ? [0, width] : [0, option.view.width - 200];
-        modelMap['time'].init();
+        modelMap[TimeModelName] = new TimeModel(TimeModelName, TimeFieldName, 'horizontal', table.columns('SuvDate'));
+        modelMap[TimeModelName].range = isHorizontal ? [0, width] : [0, option.view.width - 200];
+        modelMap[TimeModelName].init();
 
         let xModel, yModel;
         if (!isHorizontal) {
-            xModel = new LinearModel(this.xAxisName, 'horizontal', table.columns('Value'));
-            yModel = new OrdinalModel(this.yAxisName, 'vertical', points);
+            xModel = new LinearModel(this.xAxisName, 'Value', 'horizontal', table.columns('Value'));
+            yModel = new OrdinalModel(this.yAxisName, 'PointId', 'vertical', points);
         } else {
-            xModel = new OrdinalModel(this.xAxisName, 'horizontal', points);
-            yModel = new LinearModel(this.yAxisName, 'vertical', table.columns('Value'));
+            xModel = new OrdinalModel(this.xAxisName, 'PointId', 'horizontal', points);
+            yModel = new LinearModel(this.yAxisName, 'Value', 'vertical', table.columns('Value'));
         }
 
         modelMap[this.xAxisName] = xModel;

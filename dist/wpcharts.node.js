@@ -3033,7 +3033,7 @@ var Chart = (function () {
                 extend(config, data);
             }).catch(function (error) {
                 console.error(error);
-                extend(config, { node: 'http://127.0.0.1:8888' });
+                extend(config, { node: 'http://192.168.1.25:8888' });
             });
         }
     };

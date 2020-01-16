@@ -84,8 +84,8 @@ export class Correlation extends Chart {
         let {width, height} = this.gridComponent.getView();
 
         //# 初始化模型
-        let xModel = new LinearModel(this.xAxisName, 'horizontal', table.columns('valueX'));
-        let yModel = new LinearModel(this.yAxisName, 'vertical', table.columns('valueY'));
+        let xModel = new LinearModel(this.xAxisName, 'valueX', 'horizontal', table.columns('valueX'));
+        let yModel = new LinearModel(this.yAxisName, 'valueY', 'vertical', table.columns('valueY'));
 
         modelMap[this.xAxisName] = xModel;
         modelMap[this.yAxisName] = yModel;
@@ -127,50 +127,9 @@ export class Correlation extends Chart {
     protected initLegend(): void {
         let {legendManager} = this;
         legendManager.add('scatter').drawLegend(this.legendsComponent, '实测值');
-        legendManager.add('line').drawLegend(this.legendsComponent, '直线相关拟合线');
-        legendManager.add('polynomial').drawLegend(this.legendsComponent, '多项式相关拟合线');
     }
 
     protected initLines(): void {
-        let {modelMap, xAxisName, yAxisName, legendManager, data} = this;
-
-        let scaleX = modelMap[xAxisName].scale;
-        let scaleY = modelMap[yAxisName].scale;
-        let lineGenerator = d3.line()
-            .x(function (d: any) {
-                return scaleX(parseFloat(d.valueX));
-            })
-            .y(function (d: any) {
-                return scaleY(parseFloat(d.valueY));
-            });
-
-        //直线
-        let pointsLine = data.lineDataList;
-        let typeLine = 'line';
-        let legendLine = legendManager.get(typeLine);
-        if (pointsLine && pointsLine.length > 0) {
-            this.linesComponent.append(new Path({
-                d: <string>lineGenerator(pointsLine),
-                fill: 'none',
-                stroke: legendLine.color,
-                'stroke-width': 1,
-                class: 'line'
-            }));
-        }
-
-        //曲线
-        let pointsPolynomial = data.polynomialDataList;
-        let typePolynomial = 'polynomial';
-        let legendPolynomial = legendManager.get(typePolynomial);
-        if (pointsPolynomial && pointsPolynomial.length > 0) {
-            this.linesComponent.append(new Path({
-                d: <string>lineGenerator(pointsPolynomial),
-                fill: 'none',
-                stroke: legendPolynomial.color,
-                'stroke-width': 1,
-                class: 'line'
-            }));
-        }
     }
 
     protected initPoints(): void {
@@ -207,8 +166,78 @@ export class Correlation extends Chart {
         super.initMenu();
 
         let self = this;
-        let {menu: rootMenu} = this;
+        let {menu: rootMenu, modelMap, xAxisName, yAxisName, state} = this;
+        let {linesComponent, legendsComponent, legendManager, data} = this;
+
+        let scaleX = modelMap[xAxisName].scale;
+        let scaleY = modelMap[yAxisName].scale;
+        let lineGenerator = d3.line()
+            .x(function (d: any) {
+                return scaleX(parseFloat(d.valueX));
+            })
+            .y(function (d: any) {
+                return scaleY(parseFloat(d.valueY));
+            });
+
         rootMenu.append(new MenuSeparator());
+
+        rootMenu.append(new MenuItem({
+            text: '直线相关拟合线',
+            type: this.state.menuStatus['直线相关拟合线'] ? 'check' : 'normal',
+            action() {
+                let menuType = '直线相关拟合线';
+                console.log(menuType);
+                let flag = state.menuStatus[menuType];
+                if(flag) {
+                    state.menuStatus[menuType] = false;
+                } else {
+                    state.menuStatus[menuType] = true;
+                }
+                let pointsLine = data.lineDataList;
+                let typeLine = 'line';
+                legendManager.add(typeLine).drawLegend(legendsComponent, '直线相关拟合线');
+                let legendLine = legendManager.get(typeLine);
+                if (pointsLine && pointsLine.length > 0) {
+                    linesComponent.append(new Path({
+                        d: <string>lineGenerator(pointsLine),
+                        fill: 'none',
+                        stroke: legendLine.color,
+                        'stroke-width': 1,
+                        class: 'line'
+                    }));
+                }
+            }
+        }));
+
+        rootMenu.append(new MenuItem({
+            text: '多项式相关拟合线',
+            type: 'check',
+            action() {
+                console.log("多项式相关拟合线");
+                //曲线
+                let pointsPolynomial = data.polynomialDataList;
+                let typePolynomial = 'polynomial';
+                legendManager.add(typePolynomial).drawLegend(legendsComponent, '多项式相关拟合线');
+                let legendPolynomial = legendManager.get(typePolynomial);
+                if (pointsPolynomial && pointsPolynomial.length > 0) {
+                    linesComponent.append(new Path({
+                        d: <string>lineGenerator(pointsPolynomial),
+                        fill: 'none',
+                        stroke: legendPolynomial.color,
+                        'stroke-width': 1,
+                        class: 'line'
+                    }));
+                }
+            }
+        }));
+
+        rootMenu.append(new MenuItem({
+            text: '分年连线',
+            action() {
+                console.log("分年连线");
+
+            }
+        }));
 
         //使用 d3.polygonHull 计算凸包(可以包含重复的点，能正确计算)
         rootMenu.append(new MenuItem({

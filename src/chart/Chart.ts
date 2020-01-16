@@ -19,7 +19,7 @@ import {Table} from "../rdb/Table";
 import {formatTimeSimple} from "../model/TimeModel";
 import {Style} from "../svg/Style";
 import {config, isBrowser, isNode} from "../config";
-import {BrushEvent, TooltipsEvent} from "../event/EventTypes";
+import {BrushEvent, TooltipsEvent, TranslationEvent, ZoomEvent} from "../event/EventTypes";
 import {Series} from "../component/Series";
 import {LinearModel} from "../model/LinearModel";
 import {Legend} from "../component/legend/Legend";
@@ -118,6 +118,19 @@ type WarningValue = {
     Values: number[];
 };
 
+export interface State {
+    eventType: string,//事件类型: 自定义
+    mouse: {
+        isMove: boolean,//鼠标: 是否移动
+        isBrush: boolean,//鼠标: 是否框选-刷子
+    },
+    keyboard: {
+        isCtrl: boolean,//键盘: 是否按下 Ctrl
+        isShift: boolean,//键盘: 是否按下 Shift
+    },
+    menuStatus: {[key:string]: any},//菜单: 状态
+}
+
 export abstract class Chart implements IChart {
 
     public static readonly clazz: string = "chart";
@@ -135,8 +148,12 @@ export abstract class Chart implements IChart {
     table!: Table; //数据表
     tableBackup!: Table; //备份表
 
-    isMove: boolean = false; //鼠标: 是否移动
-    isBrush: boolean = false; //鼠标: 是否框选-刷子
+    state: State = {
+        eventType: '',
+        mouse: { isMove: false, isBrush: false },
+        keyboard: { isCtrl: false, isShift: false },
+        menuStatus: {},
+    };
 
     cache: { [key: string]: any } = {};
     pointIdMap: { [key: string]: number } = {}; //测点
@@ -568,24 +585,61 @@ export abstract class Chart implements IChart {
         let timer: any;
         let startPosition: number[];
         let endPosition: number[];
+
+        //鼠标移入
         rect.on('mouseover', () => {
+            d3.event.preventDefault();
             hline.show();
             vline.show();
-        }).on('mouseout', () => {
+        });
+
+        //鼠标移出
+        rect.on('museout', () => {
+            d3.event.preventDefault();
             hline.hide();
             vline.hide();
             setTimeout(() => tooltips.hide(), 200);
-        }).on('mousedown', (datum: any, index: number, groups: any[] | ArrayLike<any>) => {
-            this.isBrush = true;
+        });
+
+        //鼠标按下
+        rect.on('mousedown', (datum: any, index: number, groups: any[] | ArrayLike<any>) => {
+            d3.event.preventDefault();
+            this.state.mouse.isBrush = true;
             startPosition = d3.mouse(groups[index]);
-        }).on('mouseup', (datum: any, index: number, groups: any[] | ArrayLike<any>) => {
-            this.isBrush = false;
+
+            if (d3.event.ctrlKey) {//按下 Ctrl 键
+                //console.log(1, d3.event);
+                this.state.keyboard.isCtrl = true;
+                this.state.eventType = ZoomEvent;
+            } else if(d3.event.shiftKey) {//按下 Shift 键
+                //console.log(2, d3.event);
+                this.state.keyboard.isShift = true;
+                this.state.eventType = BrushEvent;
+            } else {
+                this.state.eventType = TranslationEvent;
+            }
+        });
+
+        //鼠标放开
+        rect.on('mouseup', (datum: any, index: number, groups: any[] | ArrayLike<any>) => {
+            d3.event.preventDefault();
+            this.state.mouse.isBrush = false;
             brushRect.attr({width: 0, height: 0, x: 0, y: 0}).hide();
             endPosition = d3.mouse(groups[index]);
 
-            //# 触发刷子框选事件
-            this.svg.dispatch(BrushEvent, {bubbles: false, cancelable: false, detail: {startPosition, endPosition}});
-        }).on('mousemove', (datum: any, index: number, groups: any[] | ArrayLike<any>) => {
+            if(this.state.eventType === ZoomEvent){
+                console.log('startPosition', startPosition);
+                console.log('endPosition', endPosition);
+            }else if(this.state.eventType === BrushEvent){
+                //# 触发刷子框选事件
+                this.svg.dispatch(BrushEvent, {bubbles: false, cancelable: false, detail: {startPosition, endPosition}});
+            }else if(this.state.eventType === TranslationEvent){
+
+            }
+        });
+
+        //鼠标移动
+        rect.on('mousemove', (datum: any, index: number, groups: any[] | ArrayLike<any>) => {
             d3.event.preventDefault();
 
             //# 移动十字线
@@ -595,8 +649,9 @@ export abstract class Chart implements IChart {
                 hline.attr({y1: y, y2: y});
                 vline.attr({x1: x, x2: x});
 
-                //# brush 选择, 显示矩形框
-                if (this.isBrush) {
+                if (this.state.eventType === ZoomEvent) {
+
+                } else if(this.state.eventType === BrushEvent) {//# brush 选择, 显示矩形框
                     let [sx, sy] = startPosition;
                     let w = Math.abs(x - sx);
                     let h = Math.abs(y - sy);
@@ -612,18 +667,19 @@ export abstract class Chart implements IChart {
                         my = sy - h;
                     }
                     brushRect.attr({width: w, height: h, x: mx, y: my}).show();
-                }
+                } else if (this.state.eventType === TranslationEvent) {
 
+                }
             } else {
                 return;
             }
 
             //# 判断鼠标是否连续移动，还是短暂停留
-            this.isMove = true;
+            this.state.mouse.isMove = true;
             tooltips.hide();
             clearTimeout(timer);
             timer = setTimeout(() => {
-                this.isMove = false;
+                this.state.mouse.isMove = false;
 
                 //# 触发提示信息事件
                 this.svg.dispatch(TooltipsEvent, {
@@ -634,6 +690,27 @@ export abstract class Chart implements IChart {
                 });
             }, 200);
 
+        });
+
+        //鼠标滚轮
+        rect.on('mousewheel', function () {//鼠标滚轮: 向上放大、向下缩小
+            d3.event.preventDefault(); //停止向上冒泡
+            const event = d3.event;
+
+            let delta = 0; //步长
+            if (event.wheelDelta) {//IE、chrome浏览器使用的是wheelDelta，并且值为“正负120的倍数”
+                delta = event.wheelDelta / 120;
+                // @ts-ignore
+                if (window.opera) delta = -delta;//因为IE、chrome等向下滚动是负值，FF是正值，为了处理一致性，在此取反处理
+            } else if (event.detail) {//FF浏览器使用的是detail,其值为“正负3的倍数”
+                delta = -event.detail / 3;
+            }
+
+            if (delta > 0) {//向上滚动
+                console.log('上', delta);
+            } else if (delta < 0) {//向下滚动
+                console.log('下', delta);
+            }
         });
 
     }

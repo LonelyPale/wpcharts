@@ -5,6 +5,7 @@ import {parseTimeT, TimeModel} from "../model/TimeModel";
 import {LinearModel} from "../model/LinearModel";
 import {Series} from "../component/Series";
 import {TimeAxis} from "../component/axis/TimeAxis";
+import {TimeFieldName, TimeModelName} from "../constant";
 
 export class Statistical extends Chart {
 
@@ -95,7 +96,7 @@ export class Statistical extends Chart {
         this.gridComponent.getView().boxOrient = 'vertical';
 
         //# 初始化模型
-        modelMap['time'] = new TimeModel('time', 'horizontal', table.columns('SuvDate'));
+        modelMap['time'] = new TimeModel(TimeModelName, TimeFieldName, 'horizontal', table.columns('SuvDate'));
         modelMap['time'].range = [0, width];
         modelMap['time'].init();
 
@@ -111,7 +112,7 @@ export class Statistical extends Chart {
 
             let rowsData = table.select(`PlotId='${i}'`);
             let columnsData = table.columns('Val', rowsData);
-            let model = new LinearModel(unit, 'vertical', columnsData);
+            let model = new LinearModel(unit, 'Val', 'vertical', columnsData);
             model.range = [series.gridComponent.getView().height, 0];
             model.ticks = 4;
             model.tickSize = 0;

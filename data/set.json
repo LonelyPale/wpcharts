@@ -1,0 +1,65 @@
+{
+  "type": "hydrograph|distribution|correlation|statistical",
+  "lines": [
+    {
+      "id": 1,
+      "legend": "solid_circle",
+      "color": "Blue"
+    },
+    {
+      "id": 2,
+      "legend": "hollow_circle",
+      "color": "#996600"
+    },
+    {
+      "id": 3,
+      "legend": "solid_rect",
+      "color": "Cyan"
+    },
+    {
+      "id": 4,
+      "legend": "hollow_rect",
+      "color": "#6600FF"
+    },
+    {
+      "id": 5,
+      "legend": "solid_triangle",
+      "color": "Green"
+    },
+    {
+      "id": 6,
+      "legend": "hollow_triangle",
+      "color": "Purple"
+    },
+    {
+      "id": 7,
+      "legend": "solid_inverted_triangle",
+      "color": "LightBlue"
+    },
+    {
+      "id": 8,
+      "legend": "hollow_inverted_triangle",
+      "color": "9999FF"
+    },
+    {
+      "id": 9,
+      "legend": "solid_rhombus",
+      "color": "SeaGreen"
+    },
+    {
+      "id": 10,
+      "legend": "hollow_rhombus",
+      "color": "Yellow"
+    },
+    {
+      "id": 11,
+      "legend": "solid_cross",
+      "color": "DarkCyan"
+    },
+    {
+      "id": 12,
+      "legend": "hollow_cross",
+      "color": "DarkGoldenRod"
+    }
+  ]
+}
