@@ -1,0 +1,12 @@
+{
+  "cname": "",
+  "code": "",
+  "gratype": "",
+  "isvisible": "",
+  "name": "",
+  "orderBy": "",
+  "orgid": "010000",
+  "orgname": "中线局",
+  "pkName": "id",
+  "setjson": "{\"type\":\"hydrograph\",\"lines\":[{\"color\":\"#FFCC33\",\"legend\":\"solid_circle\",\"id\":1},{\"color\":\"#996600\",\"legend\":\"hollow_circle\",\"id\":2},{\"color\":\"#FFCC33\",\"legend\":\"solid_rect\",\"id\":3},{\"color\":\"#6600FF\",\"legend\":\"hollow_rect\",\"id\":4},{\"color\":\"#FFCC33\",\"legend\":\"solid_triangle\",\"id\":5},{\"color\":\"#FFCC33\",\"legend\":\"hollow_triangle\",\"id\":6},{\"color\":\"#FFCC33\",\"legend\":\"solid_inverted_triangle\",\"id\":7},{\"color\":\"#9999FF\",\"legend\":\"hollow_inverted_triangle\",\"id\":8},{\"color\":\"#FFCC33\",\"legend\":\"solid_rhombus\",\"id\":9},{\"color\":\"#FFCC33\",\"legend\":\"hollow_rhombus\",\"id\":10},{\"color\":\"#FFCC33\",\"legend\":\"solid_cross\",\"id\":11},{\"color\":\"#FFCC33\",\"legend\":\"hollow_cross\",\"id\":12}]}"
+}

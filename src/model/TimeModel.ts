@@ -7,7 +7,7 @@ export let parseTimeT = d3.timeParse("%Y-%m-%dT%H:%M:%S");
 export let formatTime = d3.timeFormat("%Y-%m-%d %H:%M:%S");
 export let formatTimeSimple = d3.timeFormat("%Y-%m-%d_%H-%M-%S");
 
-let day = 24 * 60 * 60 * 1000; // 1天
+export let day = 24 * 60 * 60 * 1000; // 1天
 let month = 31 * day; // 1月,计算间隔是31天,实际显示是32天
 let year = 12 * month; // 1年
 let time_level1 = day; // 1天

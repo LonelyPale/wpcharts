@@ -932,9 +932,11 @@ var _wpcharts = (function (exports, d3) {
             var _this = this;
             this.append(menu);
             this.on('click', function () { return menu.hide(); });
-            this.on("contextmenu", function () {
+            this.on('contextmenu', function () {
                 d3.event.preventDefault();
                 var event = d3.event;
+                if (event.ctrlKey || event.shiftKey)
+                    return;
                 var x = event.offsetX || 0;
                 var y = event.offsetY || 0;
                 var menuWidth = menu.getView().width;
@@ -2517,6 +2519,8 @@ var _wpcharts = (function (exports, d3) {
     var TooltipsEvent = 'TooltipsEvent';
     var ZoomEvent = 'ZoomEvent';
     var TranslationEvent = 'TranslationEvent';
+    var MouseWheel = 'MouseWheel';
+    var MouseLeft = 'MouseLeft';
 
     function before(fun) {
         return function (target, propertyKey, descriptor) {
@@ -2980,7 +2984,7 @@ var _wpcharts = (function (exports, d3) {
                 hline.show();
                 vline.show();
             });
-            rect.on('museout', function () {
+            rect.on('mouseout', function () {
                 d3.event.preventDefault();
                 hline.hide();
                 vline.hide();
@@ -2993,57 +2997,127 @@ var _wpcharts = (function (exports, d3) {
                 if (d3.event.ctrlKey) {
                     _this.state.keyboard.isCtrl = true;
                     _this.state.eventType = ZoomEvent;
+                    var x = startPosition[0], y = startPosition[1];
+                    startPosition = [x, 0];
                 }
                 else if (d3.event.shiftKey) {
                     _this.state.keyboard.isShift = true;
                     _this.state.eventType = BrushEvent;
                 }
-                else {
+                else if (d3.event.button === 0) {
+                    console.log(3, d3.event);
                     _this.state.eventType = TranslationEvent;
+                    if (isBrowser) {
+                        _this.gridComponent.style({ cursor: 'pointer' });
+                    }
+                }
+                else {
+                    console.log(4, d3.event);
                 }
             });
             rect.on('mouseup', function (datum, index, groups) {
                 d3.event.preventDefault();
-                _this.state.mouse.isBrush = false;
                 brushRect.attr({ width: 0, height: 0, x: 0, y: 0 }).hide();
                 endPosition = d3.mouse(groups[index]);
                 if (_this.state.eventType === ZoomEvent) {
-                    console.log('startPosition', startPosition);
-                    console.log('endPosition', endPosition);
-                }
-                else if (_this.state.eventType === BrushEvent) {
+                    var x = endPosition[0], y = endPosition[1];
+                    endPosition = [x, gh];
                     _this.svg.dispatch(BrushEvent, { bubbles: false, cancelable: false, detail: { startPosition: startPosition, endPosition: endPosition } });
                 }
-                else if (_this.state.eventType === TranslationEvent) ;
+                else if (_this.state.eventType === BrushEvent) {
+                    layui.layer.confirm('您是否要<span style="color: red">保存粗差</span>？', {
+                        title: ['操作', 'font-size:18px;'],
+                        btn: ['保存粗差', '取消粗差'],
+                        btnAlign: 'c',
+                    }, function () {
+                        Message.msg('<span style="color: darkgreen">保存粗差</span>');
+                    }, function () {
+                        Message.msg('取消粗差');
+                    });
+                    _this.svg.dispatch(BrushEvent, { bubbles: false, cancelable: false, detail: { startPosition: startPosition, endPosition: endPosition } });
+                }
+                else if (_this.state.eventType === TranslationEvent) {
+                    _this.svg.dispatch(MouseLeft, { bubbles: false, cancelable: false, detail: { startPosition: startPosition, endPosition: endPosition } });
+                    if (isBrowser) {
+                        if (config.browser.chrome && config.os.group.indexOf('windows') > -1) {
+                            _this.gridComponent.style({ cursor: 'url("/wpcharts/dist/css/image/empty-1x1-white.png"),crosshair' });
+                        }
+                        else {
+                            _this.gridComponent.style({ cursor: 'url("/wpcharts/dist/css/image/empty-1x1.png"),crosshair' });
+                        }
+                    }
+                }
+                startPosition = undefined;
+                endPosition = undefined;
+                _this.state.eventType = '';
+                _this.state.mouse.isBrush = false;
             });
             rect.on('mousemove', function (datum, index, groups) {
                 d3.event.preventDefault();
                 var mouse = d3.mouse(groups[index]);
                 var x = mouse[0], y = mouse[1];
                 if (x > 0 && y > 0) {
-                    hline.attr({ y1: y, y2: y });
-                    vline.attr({ x1: x, x2: x });
-                    if (_this.state.eventType === ZoomEvent) ;
-                    else if (_this.state.eventType === BrushEvent) {
+                    var xDeviation = 0;
+                    var yDeviation = 0;
+                    if (startPosition) {
                         var sx = startPosition[0], sy = startPosition[1];
-                        var w = Math.abs(x - sx);
-                        var h = Math.abs(y - sy);
-                        var mx = void 0, my = void 0;
                         if (x > sx) {
-                            mx = sx;
+                            xDeviation = 1.5;
                         }
                         else {
-                            mx = sx - w;
+                            xDeviation = -1.5;
                         }
                         if (y > sy) {
-                            my = sy;
+                            yDeviation = 1.5;
                         }
                         else {
-                            my = sy - h;
+                            yDeviation = -1.5;
                         }
-                        brushRect.attr({ width: w, height: h, x: mx, y: my }).show();
                     }
-                    else if (_this.state.eventType === TranslationEvent) ;
+                    hline.attr({ y1: y + yDeviation, y2: y + yDeviation });
+                    vline.attr({ x1: x + xDeviation, x2: x + xDeviation });
+                    if (startPosition) {
+                        if (_this.state.eventType === ZoomEvent) {
+                            y = gh;
+                            var sx = startPosition[0], sy = startPosition[1];
+                            var w = Math.abs(x - sx);
+                            var h = Math.abs(y - sy);
+                            var mx = void 0, my = void 0;
+                            if (x > sx) {
+                                mx = sx;
+                            }
+                            else {
+                                mx = sx - w;
+                            }
+                            if (y > sy) {
+                                my = sy;
+                            }
+                            else {
+                                my = sy - h;
+                            }
+                            brushRect.attr({ width: w, height: h, x: mx, y: my }).show();
+                        }
+                        else if (_this.state.eventType === BrushEvent) {
+                            var sx = startPosition[0], sy = startPosition[1];
+                            var w = Math.abs(x - sx);
+                            var h = Math.abs(y - sy);
+                            var mx = void 0, my = void 0;
+                            if (x > sx) {
+                                mx = sx;
+                            }
+                            else {
+                                mx = sx - w;
+                            }
+                            if (y > sy) {
+                                my = sy;
+                            }
+                            else {
+                                my = sy - h;
+                            }
+                            brushRect.attr({ width: w, height: h, x: mx, y: my }).show();
+                        }
+                        else if (_this.state.eventType === TranslationEvent) ;
+                    }
                 }
                 else {
                     return;
@@ -3079,6 +3153,11 @@ var _wpcharts = (function (exports, d3) {
                 else if (delta < 0) {
                     console.log('下', delta);
                 }
+                _this.svg.dispatch(MouseWheel, {
+                    bubbles: false, cancelable: false, detail: {
+                        delta: delta
+                    }
+                });
             });
         };
         Chart.prototype.initTitle = function () {
@@ -4121,6 +4200,8 @@ var _wpcharts = (function (exports, d3) {
         __extends(Hydrograph, _super);
         function Hydrograph(selector) {
             var _this = _super.call(this, selector) || this;
+            _this.min = 0;
+            _this.max = 0;
             var schema = {
                 name: Hydrograph.clazz,
                 properties: {
@@ -4406,6 +4487,80 @@ var _wpcharts = (function (exports, d3) {
                     _this.reset(brushData);
                 }
             });
+            this.svg.on(MouseWheel, function () {
+                var delta = d3.event.detail.delta;
+                var _a = _this, modelMap = _a.modelMap, tableBackup = _a.tableBackup;
+                var brushData = [];
+                var data;
+                var time = modelMap['time'];
+                var sxValue, exValue;
+                _this.min = _this.min === 0 ? time.min.getTime() : _this.min;
+                _this.max = _this.max === 0 ? time.max.getTime() : _this.max;
+                var min = _this.min;
+                var max = _this.max;
+                var increment = (max - min) * 0.05;
+                console.log('MouseWheel:increment:', increment);
+                var time_difference = time.time_difference !== 0 ? time.time_difference : day;
+                if (delta > 0) {
+                    _this.min = min - increment;
+                    _this.max = max + increment;
+                    sxValue = formatTime(new Date(min - increment));
+                    exValue = formatTime(new Date(max + increment));
+                }
+                else {
+                    _this.min = min + increment;
+                    _this.max = max - increment;
+                    sxValue = formatTime(new Date(min + increment));
+                    exValue = formatTime(new Date(max - increment));
+                }
+                if (sxValue > exValue) {
+                    console.log('error:MouseWheel: sxValue > exValue :', sxValue, exValue, increment);
+                    return;
+                }
+                var sql = "SuvDate>='" + sxValue + "' and SuvDate<='" + exValue + "'";
+                console.log('MouseWheel:sql:', sql);
+                data = tableBackup.select(sql);
+                console.log('MouseWheel:data:', data);
+                for (var i = 0; i < data.length; i++) {
+                    brushData.push(data[i]);
+                }
+                if (brushData.length > 0) {
+                    _this.reset(brushData);
+                }
+            });
+            this.svg.on(MouseLeft, function () {
+                var _a = d3.event.detail, startPosition = _a.startPosition, endPosition = _a.endPosition;
+                var _b = _this, modelMap = _b.modelMap, tableBackup = _b.tableBackup;
+                var sx = startPosition[0], sy = startPosition[1];
+                var ex = endPosition[0], ey = endPosition[1];
+                var time = modelMap['time'];
+                var minLast = time.min.getTime();
+                var maxLast = time.max.getTime();
+                var sxValue, exValue;
+                sxValue = time.scale.invert(sx);
+                exValue = time.scale.invert(ex);
+                var time_difference_new = exValue - sxValue;
+                var minCurrent = new Date(minLast + time_difference_new);
+                var maxCurrent = new Date(maxLast + time_difference_new);
+                sxValue = formatTime(minCurrent);
+                exValue = formatTime(maxCurrent);
+                var brushData = [];
+                var data;
+                var sql = "SuvDate>='" + sxValue + "' and SuvDate<='" + exValue + "'";
+                console.log('MouseLeft:sql:', sql);
+                data = tableBackup.select(sql);
+                for (var i = 0; i < data.length; i++) {
+                    brushData.push(data[i]);
+                }
+                if (brushData.length > 0) {
+                    brushData.push([null, null, null, minCurrent, null]);
+                    brushData.push([null, null, null, maxCurrent, null]);
+                    _this.reset(brushData);
+                }
+            });
+        };
+        Hydrograph.prototype.onBrushEvent = function (zoom) {
+            var delta = d3.event.detail.delta;
         };
         Hydrograph.clazz = "hydrograph";
         Hydrograph.title = "过程线";

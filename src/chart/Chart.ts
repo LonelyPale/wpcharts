@@ -19,7 +19,7 @@ import {Table} from "../rdb/Table";
 import {formatTimeSimple} from "../model/TimeModel";
 import {Style} from "../svg/Style";
 import {config, isBrowser, isNode} from "../config";
-import {BrushEvent, TooltipsEvent, TranslationEvent, ZoomEvent} from "../event/EventTypes";
+import {BrushEvent, MouseLeft, MouseWheel, TooltipsEvent, TranslationEvent, ZoomEvent} from "../event/EventTypes";
 import {Series} from "../component/Series";
 import {LinearModel} from "../model/LinearModel";
 import {Legend} from "../component/legend/Legend";
@@ -172,6 +172,8 @@ export abstract class Chart implements IChart {
 
     warningValue!: WarningValue; //警戒值-红线
     initWarningValue!: string[]; //初始-绘制警戒值线
+
+    currentEvent!: string; //当前事件
 
     styleComponent!: SvgObject; //css
 
@@ -583,8 +585,8 @@ export abstract class Chart implements IChart {
         //g.append(select).call(brush);
 
         let timer: any;
-        let startPosition: number[];
-        let endPosition: number[];
+        let startPosition: number[] | undefined;
+        let endPosition: number[] | undefined;
 
         //鼠标移入
         rect.on('mouseover', () => {
@@ -613,32 +615,68 @@ export abstract class Chart implements IChart {
                 //console.log(1, d3.event);
                 this.state.keyboard.isCtrl = true;
                 this.state.eventType = ZoomEvent;
+                let [x, y] = startPosition;
+                startPosition = [x, 0];
             } else if(d3.event.shiftKey) {//按下 Shift 键
                 //console.log(2, d3.event);
                 this.state.keyboard.isShift = true;
                 this.state.eventType = BrushEvent;
-            } else {
+            } else if(d3.event.button === 0) {
+                console.log(3, d3.event);
                 this.state.eventType = TranslationEvent;
+                //hline.hide();
+                //vline.hide();
+                if (isBrowser) {
+                    this.gridComponent.style({cursor: 'pointer'});
+                }
+            } else {
+                console.log(4, d3.event);
             }
         });
 
         //鼠标放开
         rect.on('mouseup', (datum: any, index: number, groups: any[] | ArrayLike<any>) => {
             d3.event.preventDefault();
-            this.state.mouse.isBrush = false;
             brushRect.attr({width: 0, height: 0, x: 0, y: 0}).hide();
             endPosition = d3.mouse(groups[index]);
 
-            if(this.state.eventType === ZoomEvent){
-                console.log('startPosition', startPosition);
-                console.log('endPosition', endPosition);
-                console.log('d3.event', d3.event);
-            }else if(this.state.eventType === BrushEvent){
+            if(this.state.eventType === ZoomEvent) {
+                //console.log('startPosition', startPosition);
+                //console.log('endPosition', endPosition);
+                //console.log('d3.event', d3.event);
+                let [x, y] = endPosition;
+                endPosition = [x, gh];
+                this.svg.dispatch(BrushEvent, {bubbles: false, cancelable: false, detail: {startPosition, endPosition}});
+            } else if(this.state.eventType === BrushEvent) {
+                layui.layer.confirm('您是否要<span style="color: red">保存粗差</span>？', {
+                    title: ['操作', 'font-size:18px;'],
+                    btn: ['保存粗差', '取消粗差'],
+                    btnAlign: 'c',
+                }, function () {
+                    Message.msg('<span style="color: darkgreen">保存粗差</span>');
+                }, function () {
+                    Message.msg('取消粗差');
+                });
                 //# 触发刷子框选事件
                 this.svg.dispatch(BrushEvent, {bubbles: false, cancelable: false, detail: {startPosition, endPosition}});
-            }else if(this.state.eventType === TranslationEvent){
-
+            } else if(this.state.eventType === TranslationEvent) {
+                this.svg.dispatch(MouseLeft, {bubbles: false, cancelable: false, detail: {startPosition, endPosition}});
+                //hline.show();
+                //vline.show();
+                if (isBrowser) {
+                    if (config.browser.chrome && config.os.group.indexOf('windows') > -1) {
+                        this.gridComponent.style({cursor: 'url("/wpcharts/dist/css/image/empty-1x1-white.png"),crosshair'});
+                    } else {
+                        this.gridComponent.style({cursor: 'url("/wpcharts/dist/css/image/empty-1x1.png"),crosshair'});
+                    }
+                }
             }
+
+            //清空数据
+            startPosition = undefined;
+            endPosition = undefined;
+            this.state.eventType = '';
+            this.state.mouse.isBrush = false;
         });
 
         //鼠标移动
@@ -649,13 +687,28 @@ export abstract class Chart implements IChart {
             let mouse = d3.mouse(groups[index]);
             let [x, y] = mouse;
             if (x > 0 && y > 0) {
-                hline.attr({y1: y, y2: y});
-                vline.attr({x1: x, x2: x});
+                let xDeviation = 0;//十字线偏移值x，避免被矩形框遮住
+                let yDeviation = 0;//十字线偏移值y，避免被矩形框遮住
+                if(startPosition) {
+                    let [sx, sy] = startPosition;
+                    if(x > sx) {
+                        xDeviation = 1.5;
+                    } else {
+                        xDeviation = -1.5;
+                    }
+                    if (y > sy) {
+                        yDeviation = 1.5;
+                    } else {
+                        yDeviation = -1.5;
+                    }
+                }
 
-                if (this.state.eventType === ZoomEvent) {
+                hline.attr({y1: y + yDeviation, y2: y + yDeviation});//水平线
+                vline.attr({x1: x + xDeviation, x2: x + xDeviation});//垂直线
 
-                } else if(this.state.eventType === BrushEvent) {//# brush 选择, 显示矩形框
-                    if(startPosition) {
+                if(startPosition) {
+                    if (this.state.eventType === ZoomEvent) {
+                        y = gh;//可框选的最大高度
                         let [sx, sy] = startPosition;
                         let w = Math.abs(x - sx);
                         let h = Math.abs(y - sy);
@@ -671,9 +724,25 @@ export abstract class Chart implements IChart {
                             my = sy - h;
                         }
                         brushRect.attr({width: w, height: h, x: mx, y: my}).show();
-                    }
-                } else if (this.state.eventType === TranslationEvent) {
+                    } else if(this.state.eventType === BrushEvent) {//# brush 选择, 显示矩形框
+                        let [sx, sy] = startPosition;
+                        let w = Math.abs(x - sx);
+                        let h = Math.abs(y - sy);
+                        let mx, my;
+                        if (x > sx) {
+                            mx = sx;
+                        } else {
+                            mx = sx - w;
+                        }
+                        if (y > sy) {
+                            my = sy;
+                        } else {
+                            my = sy - h;
+                        }
+                        brushRect.attr({width: w, height: h, x: mx, y: my}).show();
+                    } else if (this.state.eventType === TranslationEvent) {
 
+                    }
                 }
             } else {
                 return;
@@ -698,7 +767,7 @@ export abstract class Chart implements IChart {
         });
 
         //鼠标滚轮
-        rect.on('mousewheel', function () {//鼠标滚轮: 向上放大、向下缩小
+        rect.on('mousewheel', () => {//鼠标滚轮: 向上放大、向下缩小
             d3.event.preventDefault(); //停止向上冒泡
             const event = d3.event;
 
@@ -716,6 +785,12 @@ export abstract class Chart implements IChart {
             } else if (delta < 0) {//向下滚动
                 console.log('下', delta);
             }
+
+            this.svg.dispatch(MouseWheel, {
+                bubbles: false, cancelable: false, detail: {
+                    delta: delta
+                }
+            });
         });
 
     }

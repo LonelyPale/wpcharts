@@ -1,3 +1,8 @@
-http://127.0.0.1:9090/siness/graph/getColor?gratype=wpchartsType-图的类型
-http://127.0.0.1:9090/siness/graph/getColor?gratype=hydrograph
-http://127.0.0.1:9090/siness/graph/getColor?gratype=distribution
+http://127.0.0.1:9090/business/graph/getColor?gratype=wpchartsType-图的类型
+http://127.0.0.1:9090/business/graph/getColor?gratype=hydrograph
+http://127.0.0.1:9090/business/graph/getColor?gratype=distribution
+
+http://192.168.1.149:9090/business/graph/getColor?gratype=hydrograph
+http://192.168.1.149:9090/business/graph/getColor?gratype=distribution
+
+http://192.168.1.149:9090/business/basic/datamanage/setEignoteByIds

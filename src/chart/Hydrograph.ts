@@ -1,6 +1,6 @@
 import d3 from "d3";
 import {Chart} from "./Chart";
-import {parseTime, TimeModel, formatTime} from "../model/TimeModel";
+import {parseTime, TimeModel, formatTime, day} from "../model/TimeModel";
 import {LinearModel} from "../model/LinearModel";
 import {TimeAxis} from "../component/axis/TimeAxis";
 import {LinearAxis} from "../component/axis/LinearAxis";
@@ -11,7 +11,7 @@ import {Text} from "../svg/Text";
 import {Row} from "../rdb/Row";
 import {G} from "../svg/G";
 import {lately} from "../util/array";
-import {BrushEvent, TooltipsEvent} from "../event/EventTypes";
+import {BrushEvent, MouseLeft, MouseWheel, TooltipsEvent} from "../event/EventTypes";
 import {View} from "../view/View";
 import {LineObject, LineObjectTag} from "../object/LineObject";
 import {TimeModelName, TimeFieldName} from "../constant";
@@ -195,6 +195,8 @@ export class Hydrograph extends Chart {
     }
 
     protected initXAxis(): void {
+        //if(this.currentEvent) return;
+
         let {width} = this.gridComponent.getView();
         let {time} = this.modelMap;
         let datetimeAxis = new TimeAxis({model: <TimeModel>time}).setView({width});
@@ -203,6 +205,8 @@ export class Hydrograph extends Chart {
     }
 
     protected initYAxis(): void {
+        //if(this.currentEvent) return;
+
         let {width, height} = this.gridComponent.getView();
         let count = 0;
         for (let model of Object.values(this.modelMap)) {
@@ -247,6 +251,9 @@ export class Hydrograph extends Chart {
             line.drawPoint(pointsComponent);
         }
     }
+
+    min: number = 0;
+    max: number = 0;
 
     protected initEvent() {
         super.initEvent();
@@ -351,6 +358,113 @@ export class Hydrograph extends Chart {
             }
         });
 
+        //鼠标滚轮: 放大缩小
+        this.svg.on(MouseWheel, () => {
+            let {detail: {delta}} = d3.event;
+            let {modelMap, tableBackup} = this;
+            let brushData: any[] = [];
+            let data: any[];
+            let time = <TimeModel>modelMap['time'];
+            let sxValue, exValue;
+
+            this.min = this.min === 0 ? (<Date>time.min).getTime() : this.min;
+            this.max = this.max === 0 ? (<Date>time.max).getTime() : this.max;
+
+            //let min = (<Date>time.min).getTime();
+            //let max = (<Date>time.max).getTime();
+            let min = this.min;
+            let max = this.max;
+            let increment = (max - min) * 0.05;
+            console.log('MouseWheel:increment:', increment);
+
+            let time_difference = time.time_difference !== 0 ? time.time_difference : day;
+            let time_difference_new = time_difference * Math.abs(delta) / 120;
+            if (delta > 0) {//向上滚动:放大
+                //sxValue = formatTime(new Date(min - time_difference_new));
+                //exValue = formatTime(new Date(max + time_difference_new));
+                //this.min = min - time_difference_new;
+                //this.max = max + time_difference_new;
+
+                this.min = min - increment;
+                this.max = max + increment;
+                sxValue = formatTime(new Date(min - increment));
+                exValue = formatTime(new Date(max + increment));
+            } else {//向下滚动:缩小
+                //sxValue = formatTime(new Date(min + time_difference_new));
+                //exValue = formatTime(new Date(max - time_difference_new));
+                //this.min = min + time_difference_new;
+                //this.max = max - time_difference_new;
+
+                this.min = min + increment;
+                this.max = max - increment;
+                sxValue = formatTime(new Date(min + increment));
+                exValue = formatTime(new Date(max - increment));
+            }
+
+            if(sxValue > exValue) {
+                console.log('error:MouseWheel: sxValue > exValue :', sxValue, exValue, increment);
+                return;
+            }
+
+            let sql = `SuvDate>='${sxValue}' and SuvDate<='${exValue}'`;
+            console.log('MouseWheel:sql:', sql);
+            data = tableBackup.select(sql);
+            console.log('MouseWheel:data:', data);
+
+            for (let i = 0; i < data.length; i++) {
+                brushData.push(data[i]);
+            }
+
+            if (brushData.length > 0) {
+                this.reset(brushData);
+            }
+        });
+
+        //左右平移
+        this.svg.on(MouseLeft, () => {
+            let {detail: {startPosition, endPosition}} = d3.event;
+            let {modelMap, tableBackup} = this;
+
+            let [sx, sy] = startPosition;
+            let [ex, ey] = endPosition;
+
+            let time = <TimeModel>modelMap['time'];
+            let minLast = (<Date>time.min).getTime();
+            let maxLast = (<Date>time.max).getTime();
+
+            let sxValue, exValue;
+            sxValue = time.scale.invert(sx);
+            exValue = time.scale.invert(ex);
+
+            let time_difference_new = exValue - sxValue;
+            let minCurrent = new Date(minLast + time_difference_new);
+            let maxCurrent = new Date(maxLast + time_difference_new);
+            sxValue = formatTime(minCurrent);
+            exValue = formatTime(maxCurrent);
+
+            let brushData: any[] = [];
+            let data: any[];
+
+            let sql = `SuvDate>='${sxValue}' and SuvDate<='${exValue}'`;
+            console.log('MouseLeft:sql:', sql);
+            data = tableBackup.select(sql);
+
+            for (let i = 0; i < data.length; i++) {
+                brushData.push(data[i]);
+            }
+
+            if (brushData.length > 0) {
+                //console.log("MouseLeft:brushData:", brushData);
+                //let row = table.insert([pointId, unit, legend, suvDate, value]);
+                brushData.push([null, null, null, minCurrent, null]);//用于保持 x 轴格式不变
+                brushData.push([null, null, null, maxCurrent, null]);//用于保持 x 轴格式不变
+                this.reset(brushData);
+            }
+        });
+    }
+
+    protected onBrushEvent(zoom: number) {
+        let {detail: {delta}} = d3.event;
     }
 
 }

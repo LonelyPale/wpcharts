@@ -16,7 +16,8 @@
         {
           "Type": "artificial-人工-X 现在不用了 X",
           "SuvDate": "2017-06-03 09:00:00",
-          "Value": 26.099
+          "Value": 26.099,
+          "ID": "asdf"
         },
         {
           "Type": "automation-自动-X 现在不用了 X",
