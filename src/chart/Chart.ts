@@ -161,6 +161,8 @@ export abstract class Chart implements IChart {
     lineMap: { [key: string]: LineObject } = {}; //线
     legendManager: LegendManager = new LegendManager(); //图例
 
+    deletedLineMap: { [key: string]: LineObject } = {}; //已删除的线
+
     seriesMap: { [key: string]: Series } = {}; //#连续视图
 
     data: any; //原始数据
@@ -172,8 +174,6 @@ export abstract class Chart implements IChart {
 
     warningValue!: WarningValue; //警戒值-红线
     initWarningValue!: string[]; //初始-绘制警戒值线
-
-    currentEvent!: string; //当前事件
 
     styleComponent!: SvgObject; //css
 
@@ -411,7 +411,11 @@ export abstract class Chart implements IChart {
                         let pointId = item.getAttribute("pointId");
                         let unit = item.getAttribute("unit");
                         let legend = item.getAttribute("legend");
-                        console.log('删除:', pointId, unit, legend);
+
+                        let id = pointId + '-' + unit + '-' + legend;
+                        self.deletedLineMap[id] = self.lineMap[id];
+
+                        console.log('删除:', id);
                         self.deleteLine(pointId, unit, legend);
                     }
                 }
@@ -981,25 +985,40 @@ export abstract class Chart implements IChart {
     }
 
     protected reset(): this;
-    protected reset(data: any[][]): this;
-    protected reset(data?: any[][]): this {
+    protected reset(data: any[][], isRefreshDeleted?: boolean): this;
+    protected reset(data?: any[][], isRefreshDeleted: boolean = false): this {
         if (data === null) return this;
 
         this.action = 'reset';
         this.clear();
 
         let {table, tableBackup} = this;
-        if (data === undefined) data = tableBackup.getData();
+        if (data === undefined) {
+            data = tableBackup.getData();
+            this.deletedLineMap = {}; //只有全部重置时才清除已删除数据线
+        }
         for (let i = 0; i < data.length; i++) {
             table.insert(data[i])
         }
 
-        return this.init();
+        this.init();
+
+        if(isRefreshDeleted) {
+            for(let line of <LineObject[]>Object.values(this.deletedLineMap)) {
+                let pointId = line.pointId;
+                let unit = line.unit;
+                let legend = line.legend;
+                this.deleteLine(pointId, unit, legend);
+            }
+        }
+
+        return this;
     }
 
     public deleteLine(pointId: string, unit: string, legend: string) {
         let {table} = this;
         let newData: any[] = [];
+        let deletedData: any[] = [];
 
         let data = table.getData();
         for(let i = 0; i < data.length; i++) {
@@ -1007,8 +1026,10 @@ export abstract class Chart implements IChart {
             let p = table.field('PointId', row);
             let u = table.field('Unit', row);
             let l = table.field('Legend', row);
-            if(p !== pointId && u !== unit && l !== legend) {
+            if(p !== pointId || u !== unit || l !== legend) {
                 newData.push(row);
+            } else {
+                deletedData.push(row);
             }
         }
 

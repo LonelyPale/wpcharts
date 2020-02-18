@@ -195,8 +195,6 @@ export class Hydrograph extends Chart {
     }
 
     protected initXAxis(): void {
-        //if(this.currentEvent) return;
-
         let {width} = this.gridComponent.getView();
         let {time} = this.modelMap;
         let datetimeAxis = new TimeAxis({model: <TimeModel>time}).setView({width});
@@ -205,8 +203,6 @@ export class Hydrograph extends Chart {
     }
 
     protected initYAxis(): void {
-        //if(this.currentEvent) return;
-
         let {width, height} = this.gridComponent.getView();
         let count = 0;
         for (let model of Object.values(this.modelMap)) {
@@ -354,7 +350,7 @@ export class Hydrograph extends Chart {
             }
 
             if (brushData.length > 0) {
-                this.reset(brushData);
+                this.reset(brushData, true);
             }
         });
 
@@ -408,7 +404,7 @@ export class Hydrograph extends Chart {
             if (brushData.length > 0) {
                 brushData.push([null, null, null, minCurrent, null]);//用于累加 x 轴增幅
                 brushData.push([null, null, null, maxCurrent, null]);//用于累加 x 轴增幅
-                this.reset(brushData);
+                this.reset(brushData, true);
             }
         });
 
@@ -451,7 +447,7 @@ export class Hydrograph extends Chart {
                 //let row = table.insert([pointId, unit, legend, suvDate, value]);
                 brushData.push([null, null, null, minCurrent, null]);//用于保持 x 轴格式不变
                 brushData.push([null, null, null, maxCurrent, null]);//用于保持 x 轴格式不变
-                this.reset(brushData);
+                this.reset(brushData, true);
             }
         });
     }

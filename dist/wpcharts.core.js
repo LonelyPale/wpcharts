@@ -2719,6 +2719,7 @@ var _wpcharts = (function (exports, d3) {
             this.modelMap = {};
             this.lineMap = {};
             this.legendManager = new LegendManager();
+            this.deletedLineMap = {};
             this.seriesMap = {};
             this.backgroundImage = '';
             this.reverseAxis = false;
@@ -2906,6 +2907,10 @@ var _wpcharts = (function (exports, d3) {
                             var pointId = item.getAttribute("pointId");
                             var unit = item.getAttribute("unit");
                             var legend = item.getAttribute("legend");
+                            console.log(111, self.deletedLineMap);
+                            console.log(222, self.lineMap);
+                            var id = pointId + '-' + unit + '-' + legend;
+                            self.deletedLineMap[id] = self.lineMap[id];
                             console.log('删除:', pointId, unit, legend);
                             self.deleteLine(pointId, unit, legend);
                         }
@@ -3375,18 +3380,31 @@ var _wpcharts = (function (exports, d3) {
                 }
             }
         };
-        Chart.prototype.reset = function (data) {
+        Chart.prototype.reset = function (data, isRefreshDeleted) {
+            if (isRefreshDeleted === void 0) { isRefreshDeleted = false; }
             if (data === null)
                 return this;
             this.action = 'reset';
             this.clear();
             var _a = this, table = _a.table, tableBackup = _a.tableBackup;
-            if (data === undefined)
+            if (data === undefined) {
                 data = tableBackup.getData();
+                this.deletedLineMap = {};
+            }
             for (var i = 0; i < data.length; i++) {
                 table.insert(data[i]);
             }
-            return this.init();
+            this.init();
+            if (isRefreshDeleted) {
+                for (var _i = 0, _b = Object.values(this.deletedLineMap); _i < _b.length; _i++) {
+                    var line = _b[_i];
+                    var pointId = line.pointId;
+                    var unit = line.unit;
+                    var legend = line.legend;
+                    this.deleteLine(pointId, unit, legend);
+                }
+            }
+            return this;
         };
         Chart.prototype.deleteLine = function (pointId, unit, legend) {
             var table = this.table;
@@ -3397,7 +3415,7 @@ var _wpcharts = (function (exports, d3) {
                 var p = table.field('PointId', row);
                 var u = table.field('Unit', row);
                 var l = table.field('Legend', row);
-                if (p !== pointId && u !== unit && l !== legend) {
+                if (p !== pointId || u !== unit || l !== legend) {
                     newData.push(row);
                 }
             }
@@ -4601,7 +4619,7 @@ var _wpcharts = (function (exports, d3) {
                     }
                 }
                 if (brushData.length > 0) {
-                    _this.reset(brushData);
+                    _this.reset(brushData, true);
                 }
             });
             this.svg.on(MouseWheel, function () {
@@ -4641,7 +4659,7 @@ var _wpcharts = (function (exports, d3) {
                 if (brushData.length > 0) {
                     brushData.push([null, null, null, minCurrent, null]);
                     brushData.push([null, null, null, maxCurrent, null]);
-                    _this.reset(brushData);
+                    _this.reset(brushData, true);
                 }
             });
             this.svg.on(MouseLeft, function () {
@@ -4671,7 +4689,7 @@ var _wpcharts = (function (exports, d3) {
                 if (brushData.length > 0) {
                     brushData.push([null, null, null, minCurrent, null]);
                     brushData.push([null, null, null, maxCurrent, null]);
-                    _this.reset(brushData);
+                    _this.reset(brushData, true);
                 }
             });
         };
