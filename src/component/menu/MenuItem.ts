@@ -25,6 +25,8 @@ export class MenuItem extends Component {
 
     private menu!: SvgObject;
 
+    public event!: any;
+
     constructor(property: MenuItemProperty) {
         super(property);
         this.property.type = this.property.type || 'normal';

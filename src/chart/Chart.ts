@@ -388,6 +388,40 @@ export abstract class Chart implements IChart {
         downloadMenu.append(downloadPNGMenuItem);
         downloadMenu.append(downloadEMFMenuItem);
 
+        let deleteChartMenuItem = new MenuItem({
+            text: '删除图',
+            action() {
+                console.log("删除 Chart");
+                self.clear();
+                self.remove();
+            }
+        });
+
+        let deleteLineMenuItem = new MenuItem({
+            text: '删除线',
+            action(menuItem: MenuItem) {
+                console.log("删除 Line:", menuItem);
+                let path = menuItem.event.path;
+                for(let item of path) {
+                    //let attrNode = item.attributes.getNamedItem("pointId");
+                    //let type = attrNode ? attrNode.value : '';
+                    //if(item.attributes && item.attributes.pointId) {}
+
+                    if(item.getAttribute && item.getAttribute("pointId")) {
+                        let pointId = item.getAttribute("pointId");
+                        let unit = item.getAttribute("unit");
+                        let legend = item.getAttribute("legend");
+                        console.log('删除:', pointId, unit, legend);
+                        self.deleteLine(pointId, unit, legend);
+                    }
+                }
+            }
+        });
+
+        rootMenu.append(new MenuSeparator());
+        rootMenu.append(deleteChartMenuItem);
+        rootMenu.append(deleteLineMenuItem);
+
         if (config.debug) {
             // 键盘控制
             let keyEvent = (function () {
@@ -961,6 +995,26 @@ export abstract class Chart implements IChart {
         }
 
         return this.init();
+    }
+
+    public deleteLine(pointId: string, unit: string, legend: string) {
+        let {table} = this;
+        let newData: any[] = [];
+
+        let data = table.getData();
+        for(let i = 0; i < data.length; i++) {
+            let row = data[i];
+            let p = table.field('PointId', row);
+            let u = table.field('Unit', row);
+            let l = table.field('Legend', row);
+            if(p !== pointId && u !== unit && l !== legend) {
+                newData.push(row);
+            }
+        }
+
+        if (newData.length > 0) {
+            this.reset(newData);
+        }
     }
 
     outputPreprocessing() {

@@ -187,10 +187,10 @@ export class Hydrograph extends Chart {
         let lines = Object.values(this.lineMap);
 
         for (let line of lines) {
-            let {legend, legendObject} = line;
+            let {pointId, unit, legend, legendObject} = line;
             //不做处理，统一按 legend 字段显示
             //let content = line.generateLegendName(LineObject.generateTags(pointIds.length, models.length));
-            legendObject.drawLegend(this.legendsComponent, legend);
+            legendObject.drawLegend(this.legendsComponent, legend, 60, {pointId, unit, legend});
         }
     }
 
@@ -361,44 +361,33 @@ export class Hydrograph extends Chart {
         //鼠标滚轮: 放大缩小
         this.svg.on(MouseWheel, () => {
             let {detail: {delta}} = d3.event;
+
             let {modelMap, tableBackup} = this;
             let brushData: any[] = [];
             let data: any[];
-            let time = <TimeModel>modelMap['time'];
             let sxValue, exValue;
+            let minCurrent, maxCurrent;
 
-            this.min = this.min === 0 ? (<Date>time.min).getTime() : this.min;
-            this.max = this.max === 0 ? (<Date>time.max).getTime() : this.max;
+            let time = <TimeModel>modelMap['time'];
+            let minLast = (<Date>time.min).getTime();
+            let maxLast = (<Date>time.max).getTime();
 
-            //let min = (<Date>time.min).getTime();
-            //let max = (<Date>time.max).getTime();
-            let min = this.min;
-            let max = this.max;
-            let increment = (max - min) * 0.05;
-            console.log('MouseWheel:increment:', increment);
+            let increment = (maxLast - minLast) * 0.05;
+            increment = increment || 24 * 60 * 60 * 1000;
+            //console.log('MouseWheel:increment:', increment);
 
-            let time_difference = time.time_difference !== 0 ? time.time_difference : day;
-            let time_difference_new = time_difference * Math.abs(delta) / 120;
             if (delta > 0) {//向上滚动:放大
-                //sxValue = formatTime(new Date(min - time_difference_new));
-                //exValue = formatTime(new Date(max + time_difference_new));
-                //this.min = min - time_difference_new;
-                //this.max = max + time_difference_new;
+                minCurrent = new Date(minLast - increment);
+                maxCurrent = new Date(maxLast + increment);
 
-                this.min = min - increment;
-                this.max = max + increment;
-                sxValue = formatTime(new Date(min - increment));
-                exValue = formatTime(new Date(max + increment));
+                sxValue = formatTime(minCurrent);
+                exValue = formatTime(maxCurrent);
             } else {//向下滚动:缩小
-                //sxValue = formatTime(new Date(min + time_difference_new));
-                //exValue = formatTime(new Date(max - time_difference_new));
-                //this.min = min + time_difference_new;
-                //this.max = max - time_difference_new;
+                minCurrent = new Date(minLast + increment);
+                maxCurrent = new Date(maxLast - increment);
 
-                this.min = min + increment;
-                this.max = max - increment;
-                sxValue = formatTime(new Date(min + increment));
-                exValue = formatTime(new Date(max - increment));
+                sxValue = formatTime(minCurrent);
+                exValue = formatTime(maxCurrent);
             }
 
             if(sxValue > exValue) {
@@ -408,18 +397,22 @@ export class Hydrograph extends Chart {
 
             let sql = `SuvDate>='${sxValue}' and SuvDate<='${exValue}'`;
             console.log('MouseWheel:sql:', sql);
+
             data = tableBackup.select(sql);
-            console.log('MouseWheel:data:', data);
+            //console.log('MouseWheel:data:', data);
 
             for (let i = 0; i < data.length; i++) {
                 brushData.push(data[i]);
             }
 
             if (brushData.length > 0) {
+                brushData.push([null, null, null, minCurrent, null]);//用于累加 x 轴增幅
+                brushData.push([null, null, null, maxCurrent, null]);//用于累加 x 轴增幅
                 this.reset(brushData);
             }
         });
 
+        //todo:平移动画：数据幅度小于显示刻度时
         //左右平移
         this.svg.on(MouseLeft, () => {
             let {detail: {startPosition, endPosition}} = d3.event;
@@ -436,7 +429,7 @@ export class Hydrograph extends Chart {
             sxValue = time.scale.invert(sx);
             exValue = time.scale.invert(ex);
 
-            let time_difference_new = exValue - sxValue;
+            let time_difference_new = -(exValue - sxValue);
             let minCurrent = new Date(minLast + time_difference_new);
             let maxCurrent = new Date(maxLast + time_difference_new);
             sxValue = formatTime(minCurrent);

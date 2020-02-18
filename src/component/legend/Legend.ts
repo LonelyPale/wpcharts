@@ -81,7 +81,8 @@ export class Legend {
 
         let g1 = new G(attr).setView({width: 148, height: 22, top: 5, bottom: 5, left: 5, right: 5, boxOrient: "horizontal"});
         context.append(g1);
-        //let rect = g1.append(new Rect({width: 148, height: 22, class:'legend-rect'}).setView({}));
+        let rect = g1.append(new Rect({width: 148, height: 22, class:'legend-rect'}).setView({}));//图例外框：用于右键菜单事件范围判断
+        //rect.on('contextmenu', ()=>{console.log(222);});
 
         let g2 = new G().setView({width: 148, height: 22, top: 5, bottom: 5, left: 3, right: 5, boxOrient: "horizontal"});
         g1.append(g2);

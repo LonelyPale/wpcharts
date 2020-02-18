@@ -141,6 +141,7 @@ export class Table {
                 let value: any = item[1].split("'")[1];
                 let columnIndex: number = this.columnIndex[key];
 
+                //todo: != 不等于
                 if (key.indexOf('!') > -1) {
                     key = key.substring(0, key.length - 1);
                     columnIndex = this.columnIndex[key];

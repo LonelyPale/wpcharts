@@ -133,7 +133,7 @@ export abstract class SvgObject {
         return this.style("display", "none");
     }
 
-    //# 默认是追加，覆盖需要明确指出
+    //# 默认是追加 false，覆盖需要明确指出 true
     transform(value: string, overwrite: boolean = false): this {
         if (overwrite) {
             this.attr('transform', value);
@@ -311,8 +311,14 @@ export abstract class SvgObject {
         return <SvgContext>this.svgContext;
     }
 
-    getChildren(id: string): SvgObject {
-        return this.children[id];
+    getChildren(): Record<string, SvgObject>;
+    getChildren(id: string): SvgObject;
+    getChildren(id?: string): SvgObject | Record<string, SvgObject> {
+        if(typeof id === "string") {
+            return this.children[id];
+        } else {
+            return this.children;
+        }
     }
 
     id(): string {

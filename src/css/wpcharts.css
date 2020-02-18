@@ -30,7 +30,9 @@ node sharp 不能正确处理 CSS 派生选择器，所以只能使用单独的 
 .tick-line {fill: none; stroke: black; stroke-width: 1px; shape-rendering: crispEdges;}
 .tick-text {font-family: sans-serif; font-size: 11px; text-anchor: middle;}
 
-.legend-rect {fill: none; stroke: black; stroke-width: 1px; shape-rendering: crispEdges;}
+/*图例外框*/
+/*.legend-rect {fill: none; stroke: black; stroke-width: 1px; shape-rendering: crispEdges;}*/
+.legend-rect {fill: white; stroke: none; stroke-width: 1px; shape-rendering: crispEdges;}
 .legend-line {fill: none; stroke-width: 1px; shape-rendering: crispEdges;}
 .legend-text {font-family: sans-serif; font-size: 11px;}
 

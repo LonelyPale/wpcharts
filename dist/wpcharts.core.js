@@ -891,7 +891,12 @@ var _wpcharts = (function (exports, d3) {
             return this.svgContext;
         };
         SvgObject.prototype.getChildren = function (id) {
-            return this.children[id];
+            if (typeof id === "string") {
+                return this.children[id];
+            }
+            else {
+                return this.children;
+            }
         };
         SvgObject.prototype.id = function () {
             return this.attribute[id];
@@ -949,6 +954,7 @@ var _wpcharts = (function (exports, d3) {
                 if (y + menuHeight > svgHeight) {
                     y -= menuHeight;
                 }
+                menu.event = event;
                 menu.attr('transform', "translate(" + x + ", " + y + ")");
                 menu.show();
             });
@@ -1199,6 +1205,71 @@ var _wpcharts = (function (exports, d3) {
                 }
             });
             return this;
+        };
+        Menu.prototype.show = function () {
+            var isDelete = false;
+            var path = d3.event.path;
+            if (path.length > 0) {
+                for (var i = 0; i < path.length; i++) {
+                    var node = path[i];
+                    var classList = node.classList;
+                    if (classList && classList.length > 0) {
+                        for (var j = 0; j < classList.length; j++) {
+                            if (classList[j] === 'legends') {
+                                isDelete = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (isDelete)
+                        break;
+                }
+            }
+            for (var _i = 0, _a = Object.values(this.children); _i < _a.length; _i++) {
+                var menuItem = _a[_i];
+                if (menuItem instanceof MenuItem) {
+                    if (menuItem.property.text === '删除线') {
+                        if (isDelete) {
+                            menuItem.event = this.event;
+                            menuItem.show();
+                        }
+                        else {
+                            menuItem.hide();
+                        }
+                    }
+                }
+            }
+            var countHideItem = 0;
+            for (var _b = 0, _c = Object.values(this.children); _b < _c.length; _b++) {
+                var item = _c[_b];
+                var view = item.getView();
+                if (item instanceof Menu) {
+                    if (item.style('display') === 'none') {
+                        countHideItem++;
+                    }
+                    else {
+                        item.transform("translate(" + view.tx + ", " + (view.ty - countHideItem * MenuItem.Height) + ")", true);
+                    }
+                }
+                else if (item instanceof MenuItem) {
+                    if (item.style('display') === 'none') {
+                        countHideItem++;
+                    }
+                    else {
+                        item.transform("translate(" + view.tx + ", " + (view.ty - countHideItem * MenuItem.Height) + ")", true);
+                    }
+                }
+                else if (item instanceof MenuSeparator) {
+                    if (item.style('display') === 'none') {
+                        countHideItem++;
+                    }
+                    else {
+                        item.transform("translate(" + view.tx + ", " + (view.ty - countHideItem * MenuItem.Height) + ")", true);
+                    }
+                }
+            }
+            this.layout.attr('height', this.view.height - countHideItem * MenuItem.Height);
+            return _super.prototype.show.call(this);
         };
         Menu.ClassName = 'menu';
         return Menu;
@@ -2371,6 +2442,7 @@ var _wpcharts = (function (exports, d3) {
             }
             var g1 = new G(attr).setView({ width: 148, height: 22, top: 5, bottom: 5, left: 5, right: 5, boxOrient: "horizontal" });
             context.append(g1);
+            var rect = g1.append(new Rect({ width: 148, height: 22, class: 'legend-rect' }).setView({}));
             var g2 = new G().setView({ width: 148, height: 22, top: 5, bottom: 5, left: 3, right: 5, boxOrient: "horizontal" });
             g1.append(g2);
             var line = g2.append(new Line({ x1: 0, y1: 6, x2: 25, y2: 6, stroke: this.color, class: 'legend-line' }).setView({}));
@@ -2815,6 +2887,34 @@ var _wpcharts = (function (exports, d3) {
             downloadMenuItem.append(downloadMenu);
             downloadMenu.append(downloadPNGMenuItem);
             downloadMenu.append(downloadEMFMenuItem);
+            var deleteChartMenuItem = new MenuItem({
+                text: '删除图',
+                action: function () {
+                    console.log("删除 Chart");
+                    self.clear();
+                    self.remove();
+                }
+            });
+            var deleteLineMenuItem = new MenuItem({
+                text: '删除线',
+                action: function (menuItem) {
+                    console.log("删除 Line:", menuItem);
+                    var path = menuItem.event.path;
+                    for (var _i = 0, path_1 = path; _i < path_1.length; _i++) {
+                        var item = path_1[_i];
+                        if (item.getAttribute && item.getAttribute("pointId")) {
+                            var pointId = item.getAttribute("pointId");
+                            var unit = item.getAttribute("unit");
+                            var legend = item.getAttribute("legend");
+                            console.log('删除:', pointId, unit, legend);
+                            self.deleteLine(pointId, unit, legend);
+                        }
+                    }
+                }
+            });
+            rootMenu.append(new MenuSeparator());
+            rootMenu.append(deleteChartMenuItem);
+            rootMenu.append(deleteLineMenuItem);
             if (config.debug) {
                 var keyEvent = (function () {
                     document.onkeydown = function (e) {
@@ -3287,6 +3387,23 @@ var _wpcharts = (function (exports, d3) {
                 table.insert(data[i]);
             }
             return this.init();
+        };
+        Chart.prototype.deleteLine = function (pointId, unit, legend) {
+            var table = this.table;
+            var newData = [];
+            var data = table.getData();
+            for (var i = 0; i < data.length; i++) {
+                var row = data[i];
+                var p = table.field('PointId', row);
+                var u = table.field('Unit', row);
+                var l = table.field('Legend', row);
+                if (p !== pointId && u !== unit && l !== legend) {
+                    newData.push(row);
+                }
+            }
+            if (newData.length > 0) {
+                this.reset(newData);
+            }
         };
         Chart.prototype.outputPreprocessing = function () {
             this.menu.hide();
@@ -4335,8 +4452,8 @@ var _wpcharts = (function (exports, d3) {
             var lines = Object.values(this.lineMap);
             for (var _i = 0, lines_1 = lines; _i < lines_1.length; _i++) {
                 var line = lines_1[_i];
-                var legend = line.legend, legendObject = line.legendObject;
-                legendObject.drawLegend(this.legendsComponent, legend);
+                var pointId = line.pointId, unit = line.unit, legend = line.legend, legendObject = line.legendObject;
+                legendObject.drawLegend(this.legendsComponent, legend, 60, { pointId: pointId, unit: unit, legend: legend });
             }
         };
         Hydrograph.prototype.initXAxis = function () {
@@ -4492,26 +4609,24 @@ var _wpcharts = (function (exports, d3) {
                 var _a = _this, modelMap = _a.modelMap, tableBackup = _a.tableBackup;
                 var brushData = [];
                 var data;
-                var time = modelMap['time'];
                 var sxValue, exValue;
-                _this.min = _this.min === 0 ? time.min.getTime() : _this.min;
-                _this.max = _this.max === 0 ? time.max.getTime() : _this.max;
-                var min = _this.min;
-                var max = _this.max;
-                var increment = (max - min) * 0.05;
-                console.log('MouseWheel:increment:', increment);
-                var time_difference = time.time_difference !== 0 ? time.time_difference : day;
+                var minCurrent, maxCurrent;
+                var time = modelMap['time'];
+                var minLast = time.min.getTime();
+                var maxLast = time.max.getTime();
+                var increment = (maxLast - minLast) * 0.05;
+                increment = increment || 24 * 60 * 60 * 1000;
                 if (delta > 0) {
-                    _this.min = min - increment;
-                    _this.max = max + increment;
-                    sxValue = formatTime(new Date(min - increment));
-                    exValue = formatTime(new Date(max + increment));
+                    minCurrent = new Date(minLast - increment);
+                    maxCurrent = new Date(maxLast + increment);
+                    sxValue = formatTime(minCurrent);
+                    exValue = formatTime(maxCurrent);
                 }
                 else {
-                    _this.min = min + increment;
-                    _this.max = max - increment;
-                    sxValue = formatTime(new Date(min + increment));
-                    exValue = formatTime(new Date(max - increment));
+                    minCurrent = new Date(minLast + increment);
+                    maxCurrent = new Date(maxLast - increment);
+                    sxValue = formatTime(minCurrent);
+                    exValue = formatTime(maxCurrent);
                 }
                 if (sxValue > exValue) {
                     console.log('error:MouseWheel: sxValue > exValue :', sxValue, exValue, increment);
@@ -4520,11 +4635,12 @@ var _wpcharts = (function (exports, d3) {
                 var sql = "SuvDate>='" + sxValue + "' and SuvDate<='" + exValue + "'";
                 console.log('MouseWheel:sql:', sql);
                 data = tableBackup.select(sql);
-                console.log('MouseWheel:data:', data);
                 for (var i = 0; i < data.length; i++) {
                     brushData.push(data[i]);
                 }
                 if (brushData.length > 0) {
+                    brushData.push([null, null, null, minCurrent, null]);
+                    brushData.push([null, null, null, maxCurrent, null]);
                     _this.reset(brushData);
                 }
             });
@@ -4539,7 +4655,7 @@ var _wpcharts = (function (exports, d3) {
                 var sxValue, exValue;
                 sxValue = time.scale.invert(sx);
                 exValue = time.scale.invert(ex);
-                var time_difference_new = exValue - sxValue;
+                var time_difference_new = -(exValue - sxValue);
                 var minCurrent = new Date(minLast + time_difference_new);
                 var maxCurrent = new Date(maxLast + time_difference_new);
                 sxValue = formatTime(minCurrent);

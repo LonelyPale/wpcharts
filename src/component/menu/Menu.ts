@@ -13,6 +13,8 @@ export class Menu extends Component {
 
     private layout!: Rect;
 
+    public event!: any;
+
     constructor(property?: ComponentProperty) {
         super(property);
         this.setView({
@@ -83,6 +85,75 @@ export class Menu extends Component {
         });
 
         return this;
+    }
+
+    show(): this;
+    show(node : any): this;
+    show(): this {
+        //是否触发图例的删除线菜单项
+        let isDelete = false;
+        let path = d3.event.path;
+        if(path.length > 0) {
+            for(let i = 0; i < path.length; i++) {
+                let node = path[i];
+                let classList = node.classList;
+                if(classList && classList.length > 0) {
+                    for(let j = 0; j < classList.length; j++) {
+                        if(classList[j] === 'legends') {
+                            isDelete = true;
+                            break;
+                        }
+                    }
+                }
+                if(isDelete) break;
+            }
+        }
+
+        //let children = this.children;
+        //let menuItemList = <MenuItem[]>Object.values(children);
+        //for (let menuItem of <MenuItem[]>Object.values(this.children)) {}
+
+        //显示或隐藏图例的菜单项：删除线
+        for (let menuItem of Object.values(this.children)) {
+            if (menuItem instanceof MenuItem) {
+                if(menuItem.property.text === '删除线') {
+                    if(isDelete) {
+                        menuItem.event = this.event;
+                        menuItem.show();
+                    } else {
+                        menuItem.hide();
+                    }
+                }
+            }
+        }
+
+        //调整有隐藏项的菜单高度
+        let countHideItem = 0;
+        for (let item of Object.values(this.children)) {
+            let view = (<SvgObject>item).getView();
+            if(item instanceof Menu) {
+                if(item.style('display') === 'none') {
+                    countHideItem++;
+                } else {
+                    item.transform(`translate(${view.tx}, ${view.ty - countHideItem * MenuItem.Height})`, true);
+                }
+            } else if (item instanceof MenuItem) {
+                if(item.style('display') === 'none') {
+                    countHideItem++;
+                } else {
+                    item.transform(`translate(${view.tx}, ${view.ty - countHideItem * MenuItem.Height})`, true);
+                }
+            } else if (item instanceof MenuSeparator) {
+                if(item.style('display') === 'none') {
+                    countHideItem++;
+                } else {
+                    item.transform(`translate(${view.tx}, ${view.ty - countHideItem * MenuItem.Height})`, true);
+                }
+            }
+        }
+        this.layout.attr('height', (<View>this.view).height - countHideItem * MenuItem.Height);
+
+        return super.show();
     }
 
 }

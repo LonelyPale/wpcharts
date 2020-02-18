@@ -22,11 +22,16 @@ export class Svg extends SvgObject {
         this.append(menu);
         this.on('click', () => menu.hide());
         this.on('contextmenu', () => {
-            //console.log('contextmenu');
+            //console.log('event: contextmenu', d3.event);
             d3.event.preventDefault(); //阻止冒泡
 
             let event = d3.event;
             if(event.ctrlKey || event.shiftKey) return; //按下 ctrl 或 shift 时不显示右键菜单
+
+            //根据 xy 获取元素
+            //let node = document.elementFromPoint(event.x, event.y);
+            //let nodes = document.elementsFromPoint(event.x, event.y);
+            //console.log('event: contextmenu: node:', node);
 
             //mouse 位置
             let x = event.offsetX || 0;//clientX
@@ -48,6 +53,7 @@ export class Svg extends SvgObject {
                 y -= menuHeight;
             }
 
+            menu.event = event;
             menu.attr('transform', `translate(${x}, ${y})`);
             menu.show();
         });
