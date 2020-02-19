@@ -891,20 +891,40 @@ export abstract class Chart implements IChart {
         d3.select(this.selector).select("svg").remove();
     }
 
-    protected drawDottedLine(num: number, type: 'horizontal' | 'vertical') {
+    protected drawDottedLine(num: number[], type: 'horizontal' | 'vertical'): void;
+    protected drawDottedLine(num: number, type: 'horizontal' | 'vertical'): void;
+    protected drawDottedLine(num: number | number[], type: 'horizontal' | 'vertical'): void {
         let {width, height} = this.gridComponent.getView();
-        let space = type === 'horizontal' ? height / num : width / num;
-        if (type === 'horizontal') {
-            for (let i = 1; i < num; i++) {
-                let interval = space * i + 0.5;
-                let line = new Line({y1: interval, y2: interval, x2: width, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5});
-                this.backgroundComponent.append(line);
+        if(num instanceof Array) {
+            if (type === 'horizontal') {
+                for(let i = 0; i < num.length; i++) {
+                    let n = num[i];
+                    if(i === 0) n -= 0.5;
+                    let line = new Line({y1: n, y2: n, x2: width, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5});
+                    this.backgroundComponent.append(line);
+                }
+            } else if (type === 'vertical') {
+                for(let i = 0; i < num.length; i++) {
+                    let n = num[i];
+                    if(i === 0) n += 0.5;
+                    let line = new Line({x1: n, x2: n, y2: height, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5});
+                    this.backgroundComponent.append(line);
+                }
             }
-        } else if (type === 'vertical') {
-            for (let i = 1; i < num; i++) {
-                let interval = space * i + 0.5;
-                let line = new Line({x1: interval, x2: interval, y2: height, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5});
-                this.backgroundComponent.append(line);
+        } else {
+            let space = type === 'horizontal' ? height / num : width / num;
+            if (type === 'horizontal') {
+                for (let i = 1; i < num; i++) {
+                    let interval = space * i + 0.5;
+                    let line = new Line({y1: interval, y2: interval, x2: width, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5});
+                    this.backgroundComponent.append(line);
+                }
+            } else if (type === 'vertical') {
+                for (let i = 1; i < num; i++) {
+                    let interval = space * i + 0.5;
+                    let line = new Line({x1: interval, x2: interval, y2: height, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5});
+                    this.backgroundComponent.append(line);
+                }
             }
         }
     }

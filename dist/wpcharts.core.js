@@ -2907,11 +2907,9 @@ var _wpcharts = (function (exports, d3) {
                             var pointId = item.getAttribute("pointId");
                             var unit = item.getAttribute("unit");
                             var legend = item.getAttribute("legend");
-                            console.log(111, self.deletedLineMap);
-                            console.log(222, self.lineMap);
                             var id = pointId + '-' + unit + '-' + legend;
                             self.deletedLineMap[id] = self.lineMap[id];
-                            console.log('删除:', pointId, unit, legend);
+                            console.log('删除:', id);
                             self.deleteLine(pointId, unit, legend);
                         }
                     }
@@ -3299,19 +3297,41 @@ var _wpcharts = (function (exports, d3) {
         };
         Chart.prototype.drawDottedLine = function (num, type) {
             var _a = this.gridComponent.getView(), width = _a.width, height = _a.height;
-            var space = type === 'horizontal' ? height / num : width / num;
-            if (type === 'horizontal') {
-                for (var i = 1; i < num; i++) {
-                    var interval = space * i + 0.5;
-                    var line = new Line({ y1: interval, y2: interval, x2: width, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5 });
-                    this.backgroundComponent.append(line);
+            if (num instanceof Array) {
+                if (type === 'horizontal') {
+                    for (var i = 0; i < num.length; i++) {
+                        var n = num[i];
+                        if (i === 0)
+                            n -= 0.5;
+                        var line = new Line({ y1: n, y2: n, x2: width, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5 });
+                        this.backgroundComponent.append(line);
+                    }
+                }
+                else if (type === 'vertical') {
+                    for (var i = 0; i < num.length; i++) {
+                        var n = num[i];
+                        if (i === 0)
+                            n += 0.5;
+                        var line = new Line({ x1: n, x2: n, y2: height, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5 });
+                        this.backgroundComponent.append(line);
+                    }
                 }
             }
-            else if (type === 'vertical') {
-                for (var i = 1; i < num; i++) {
-                    var interval = space * i + 0.5;
-                    var line = new Line({ x1: interval, x2: interval, y2: height, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5 });
-                    this.backgroundComponent.append(line);
+            else {
+                var space = type === 'horizontal' ? height / num : width / num;
+                if (type === 'horizontal') {
+                    for (var i = 1; i < num; i++) {
+                        var interval = space * i + 0.5;
+                        var line = new Line({ y1: interval, y2: interval, x2: width, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5 });
+                        this.backgroundComponent.append(line);
+                    }
+                }
+                else if (type === 'vertical') {
+                    for (var i = 1; i < num; i++) {
+                        var interval = space * i + 0.5;
+                        var line = new Line({ x1: interval, x2: interval, y2: height, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5 });
+                        this.backgroundComponent.append(line);
+                    }
                 }
             }
         };
@@ -5051,11 +5071,12 @@ var _wpcharts = (function (exports, d3) {
 
     var OrdinalModel = (function (_super) {
         __extends(OrdinalModel, _super);
-        function OrdinalModel(name, fieldName, type, data) {
+        function OrdinalModel(name, fieldName, type, data, position) {
             if (data === void 0) { data = []; }
             var _this = _super.call(this, name, fieldName, type, data) || this;
             _this.domain = data;
             _this.tickValues = data;
+            _this.position = position;
             return _this;
         }
         OrdinalModel.prototype.init = function () {
@@ -5063,11 +5084,24 @@ var _wpcharts = (function (exports, d3) {
             if (domain.length !== range.length) {
                 var length = Math.abs(range[0] - range[1]);
                 var min = d3.min(range) || 0;
+                var max = d3.max(range) || 0;
                 var count = domain.length;
-                var space = length / (count - 1);
                 range = [];
-                for (var i = 0; i < count; i++) {
-                    range.push(min + space * i);
+                if (this.position && this.position.length > 0) {
+                    var pos = this.position;
+                    var posMax = pos[pos.length - 1] - pos[0];
+                    var zoomScale = max / posMax;
+                    for (var _i = 0, pos_1 = pos; _i < pos_1.length; _i++) {
+                        var p = pos_1[_i];
+                        p = p - pos[0];
+                        range.push(min + p * zoomScale);
+                    }
+                }
+                else {
+                    var space = length / (count - 1);
+                    for (var i = 0; i < count; i++) {
+                        range.push(min + space * i);
+                    }
                 }
                 this.range = range;
             }
@@ -5086,6 +5120,7 @@ var _wpcharts = (function (exports, d3) {
             var _this = _super.call(this, selector) || this;
             _this.isHorizontal = true;
             _this.points = [];
+            _this.pointsPosition = [];
             _this.lines = {};
             var schema = {
                 name: Distribution.clazz,
@@ -5147,14 +5182,22 @@ var _wpcharts = (function (exports, d3) {
                     var row = table.insert([pointId, unit, suvDate, value, pointX, pointY, plotAngle, valueY]);
                 }
             }
-            for (var i = 0, len = usedData.pointCategories.length; i < len; i++) {
-                this.points.push(usedData.pointCategories[i]);
+            if (usedData.pointCategories && usedData.pointCategories.length > 0) {
+                for (var i = 0, len = usedData.pointCategories.length; i < len; i++) {
+                    this.points.push(usedData.pointCategories[i]);
+                }
+            }
+            if (usedData.pointPosition && usedData.pointPosition.length > 0) {
+                for (var _i = 0, _b = usedData.pointPosition; _i < _b.length; _i++) {
+                    var pos = _b[_i];
+                    this.pointsPosition.push(pos);
+                }
             }
             this.title = this.data.title || this.title;
             this.tableBackup = table.copy(Distribution.clazz + '-backup');
         };
         Distribution.prototype.initModel = function () {
-            var _a = this, modelMap = _a.modelMap, lineMap = _a.lineMap, cache = _a.cache, isHorizontal = _a.isHorizontal, points = _a.points, table = _a.table, option = _a.option, reverseAxis = _a.reverseAxis;
+            var _a = this, modelMap = _a.modelMap, lineMap = _a.lineMap, cache = _a.cache, isHorizontal = _a.isHorizontal, points = _a.points, pointsPosition = _a.pointsPosition, table = _a.table, option = _a.option, reverseAxis = _a.reverseAxis;
             var _b = this.gridComponent.getView(), width = _b.width, height = _b.height;
             modelMap[TimeModelName] = new TimeModel(TimeModelName, TimeFieldName, 'horizontal', table.columns('SuvDate'));
             modelMap[TimeModelName].range = isHorizontal ? [0, width] : [0, option.view.width - 200];
@@ -5162,10 +5205,10 @@ var _wpcharts = (function (exports, d3) {
             var xModel, yModel;
             if (!isHorizontal) {
                 xModel = new LinearModel(this.xAxisName, 'Value', 'horizontal', table.columns('Value'));
-                yModel = new OrdinalModel(this.yAxisName, 'PointId', 'vertical', points);
+                yModel = new OrdinalModel(this.yAxisName, 'PointId', 'vertical', points, pointsPosition);
             }
             else {
-                xModel = new OrdinalModel(this.xAxisName, 'PointId', 'horizontal', points);
+                xModel = new OrdinalModel(this.xAxisName, 'PointId', 'horizontal', points, pointsPosition);
                 yModel = new LinearModel(this.yAxisName, 'Value', 'vertical', table.columns('Value'));
             }
             modelMap[this.xAxisName] = xModel;
@@ -5229,13 +5272,14 @@ var _wpcharts = (function (exports, d3) {
             var xAxis;
             if (isHorizontal) {
                 xAxis = new OrdinalAxis({ model: xAxisModel, type: "axisBottom" }).setView({ width: width, height: 20 });
+                this.drawDottedLine(xAxisModel.range, 'vertical');
             }
             else {
                 xAxis = new LinearAxis({ model: xAxisModel, type: "axisBottom" }).setView({ width: width, height: 20 });
+                this.drawDottedLine(xAxisModel.tickValues.length - 1, 'vertical');
             }
             this.bottomComponent.append(xAxis);
             this.bottomComponent.append(timeAxis);
-            this.drawDottedLine(xAxisModel.tickValues.length - 1, 'vertical');
         };
         Distribution.prototype.initYAxis = function () {
             var isHorizontal = this.isHorizontal;
@@ -5245,12 +5289,13 @@ var _wpcharts = (function (exports, d3) {
             var yAxisModel = this.modelMap[this.yAxisName];
             if (isHorizontal) {
                 yAxis = new LinearAxis({ model: yAxisModel, type: "axisLeft" }).setView({ x: width, y: -0.5, height: height });
+                this.drawDottedLine(yAxisModel.tickValues.length - 1, 'horizontal');
             }
             else {
                 yAxis = new OrdinalAxis({ model: yAxisModel, type: "axisLeft" }).setView({ x: width, y: -0.5, height: height });
+                this.drawDottedLine(yAxisModel.range, 'horizontal');
             }
             this.leftComponent.append(yAxis);
-            this.drawDottedLine(yAxisModel.tickValues.length - 1, 'horizontal');
         };
         Distribution.prototype.initLines = function () {
             var _a = this, lineMap = _a.lineMap, legendManager = _a.legendManager;

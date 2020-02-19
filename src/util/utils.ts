@@ -1,3 +1,8 @@
+//验证数据 是数字：返回true；不是数字：返回false
+export function isNumber(val: any):boolean {
+    return parseFloat(val).toString() != "NaN";
+}
+
 //浅合并 object
 export function extend(target: any, source: any) {
     for (let key in source) {

@@ -26,7 +26,8 @@ export class Distribution extends Chart {
     xAxisName!: string;
     yAxisName!: string;
 
-    points: any[] = []; //所有测点集
+    points: string[] = []; //所有测点集
+    pointsPosition: number[] = []; //所有测点集坐标位置
 
     lines: any = {}; //已绘制的线
 
@@ -114,8 +115,16 @@ export class Distribution extends Chart {
             }
         }*/
 
-        for (let i = 0, len = usedData.pointCategories.length; i < len; i++) {
-            this.points.push(usedData.pointCategories[i]);
+        if(usedData.pointCategories && usedData.pointCategories.length > 0) {
+            for (let i = 0, len = usedData.pointCategories.length; i < len; i++) {
+                this.points.push(usedData.pointCategories[i]);
+            }
+        }
+
+        if(usedData.pointPosition && usedData.pointPosition.length > 0) {
+            for (let pos of usedData.pointPosition) {
+                this.pointsPosition.push(pos);
+            }
         }
 
         this.title = this.data.title || this.title;
@@ -125,7 +134,7 @@ export class Distribution extends Chart {
     }
 
     protected initModel(): void {
-        let {modelMap, lineMap, cache, isHorizontal, points, table, option, reverseAxis} = this;
+        let {modelMap, lineMap, cache, isHorizontal, points, pointsPosition, table, option, reverseAxis} = this;
         let {width, height} = this.gridComponent.getView();
 
         //# 初始化模型
@@ -136,9 +145,9 @@ export class Distribution extends Chart {
         let xModel, yModel;
         if (!isHorizontal) {
             xModel = new LinearModel(this.xAxisName, 'Value', 'horizontal', table.columns('Value'));
-            yModel = new OrdinalModel(this.yAxisName, 'PointId', 'vertical', points);
+            yModel = new OrdinalModel(this.yAxisName, 'PointId', 'vertical', points, pointsPosition);
         } else {
-            xModel = new OrdinalModel(this.xAxisName, 'PointId', 'horizontal', points);
+            xModel = new OrdinalModel(this.xAxisName, 'PointId', 'horizontal', points, pointsPosition);
             yModel = new LinearModel(this.yAxisName, 'Value', 'vertical', table.columns('Value'));
         }
 
@@ -213,13 +222,14 @@ export class Distribution extends Chart {
         let xAxis;
         if (isHorizontal) {
             xAxis = new OrdinalAxis({model: xAxisModel, type: "axisBottom"}).setView({width, height: 20});
+            this.drawDottedLine(xAxisModel.range, 'vertical');
         } else {
             xAxis = new LinearAxis({model: xAxisModel, type: "axisBottom"}).setView({width, height: 20});
+            this.drawDottedLine(xAxisModel.tickValues.length - 1, 'vertical');
         }
 
         this.bottomComponent.append(xAxis);
         this.bottomComponent.append(timeAxis);
-        this.drawDottedLine(xAxisModel.tickValues.length - 1, 'vertical');
     }
 
     protected initYAxis(): void {
@@ -231,12 +241,13 @@ export class Distribution extends Chart {
         let yAxisModel = this.modelMap[this.yAxisName];
         if (isHorizontal) {
             yAxis = new LinearAxis({model: yAxisModel, type: "axisLeft"}).setView({x: width, y: -0.5, height});
+            this.drawDottedLine(yAxisModel.tickValues.length - 1, 'horizontal');
         } else {
             yAxis = new OrdinalAxis({model: yAxisModel, type: "axisLeft"}).setView({x: width, y: -0.5, height});
+            this.drawDottedLine(yAxisModel.range, 'horizontal');
         }
 
         this.leftComponent.append(yAxis);
-        this.drawDottedLine(yAxisModel.tickValues.length - 1, 'horizontal');
     }
 
     protected initLines(): void {
