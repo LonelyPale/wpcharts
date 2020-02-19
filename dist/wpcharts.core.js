@@ -5127,6 +5127,7 @@ var _wpcharts = (function (exports, d3) {
                 properties: {
                     PointId: 'string',
                     Unit: 'string',
+                    Legend: 'string',
                     SuvDate: 'Date',
                     Value: 'number',
                     pointX: 'number',
@@ -5179,7 +5180,8 @@ var _wpcharts = (function (exports, d3) {
                             valueY = valueY ? parseFloat(valueY) : valueY;
                         }
                     }
-                    var row = table.insert([pointId, unit, suvDate, value, pointX, pointY, plotAngle, valueY]);
+                    var legend = formatTime(suvDate);
+                    var row = table.insert([pointId, unit, legend, suvDate, value, pointX, pointY, plotAngle, valueY]);
                 }
             }
             if (usedData.pointCategories && usedData.pointCategories.length > 0) {
@@ -5240,8 +5242,16 @@ var _wpcharts = (function (exports, d3) {
                 var row = rows[i];
                 var suvDate = row.get('SuvDate');
                 var niceDate = formatTime(suvDate);
+                var pointId = row.get('PointId');
+                var unit = row.get('Unit');
+                var legend = row.get('Legend');
                 if (!lineMap[niceDate]) {
-                    lineMap[niceDate] = { data: [row.get()] };
+                    var lineObject = new LineObject(pointId, unit, legend);
+                    lineObject.data = [row.get()];
+                    lineObject.table = table;
+                    lineObject.xModel = xModel;
+                    lineObject.yModel = yModel;
+                    lineMap[niceDate] = lineObject;
                 }
                 else {
                     lineMap[niceDate].data.push(row.get());
@@ -5306,8 +5316,7 @@ var _wpcharts = (function (exports, d3) {
                 for (var i = 0; i < len; i++) {
                     var time = lineKeys[i];
                     var lineObj = lineMap[time];
-                    lineObj.time = time;
-                    lineObj.legend = legendManager.add(time);
+                    lineObj.legendObject = legendManager.add(time);
                     this.drawLineClick(lineObj);
                     this.drawLegendClick(lineObj);
                     if (!this.data.dataYList)
@@ -5322,7 +5331,7 @@ var _wpcharts = (function (exports, d3) {
         Distribution.prototype.drawLineClick = function (line) {
             var _a = this, modelMap = _a.modelMap, table = _a.table;
             var points = line.data;
-            var legend = line.legend;
+            var legend = line.legendObject;
             var isHorizontal = this.isHorizontal;
             var scaleX = modelMap[this.xAxisName].scale;
             var scaleY = modelMap[this.yAxisName].scale;
@@ -5354,7 +5363,7 @@ var _wpcharts = (function (exports, d3) {
         Distribution.prototype.drawPointClick = function (line) {
             var _a = this, modelMap = _a.modelMap, table = _a.table;
             var points = line.data;
-            var legend = line.legend;
+            var legend = line.legendObject;
             var isHorizontal = this.isHorizontal;
             var scaleX = modelMap[this.xAxisName].scale;
             var scaleY = modelMap[this.yAxisName].scale;
@@ -5369,8 +5378,8 @@ var _wpcharts = (function (exports, d3) {
             }
         };
         Distribution.prototype.drawLegendClick = function (line) {
-            var time = line.time, legend = line.legend;
-            legend.drawLegend(this.legendsComponent, time.substr(0, 10));
+            var legend = line.legend, legendObject = line.legendObject;
+            legendObject.drawLegend(this.legendsComponent, legend.substr(0, 10));
         };
         Distribution.prototype.onClickTime = function (time) {
             var _a = this, legendManager = _a.legendManager, lineMap = _a.lineMap, lines = _a.lines, isHorizontal = _a.isHorizontal, cache = _a.cache, table = _a.table;
@@ -5380,8 +5389,7 @@ var _wpcharts = (function (exports, d3) {
             if (size > 0) {
                 console.log('onClickTime:', time);
                 var lineObj = lineMap[time];
-                lineObj.time = time;
-                lineObj.legend = legendManager.add(time);
+                lineObj.legendObject = legendManager.add(time);
                 this.drawLineClick(lineObj);
                 this.drawLegendClick(lineObj);
                 if (!this.data.dataYList)

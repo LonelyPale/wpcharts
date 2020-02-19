@@ -15,6 +15,7 @@ import {TooltipsEvent} from "../event/EventTypes";
 import {lately} from "../util/array";
 import {View} from "../view/View";
 import {TimeFieldName, TimeModelName} from "../constant";
+import {LineObject} from "../object/LineObject";
 
 export class Distribution extends Chart {
 
@@ -39,6 +40,7 @@ export class Distribution extends Chart {
             properties: {
                 PointId: 'string',
                 Unit: 'string',
+                Legend: 'string',
                 SuvDate: 'Date',
                 Value: 'number',
                 pointX: 'number',
@@ -101,7 +103,8 @@ export class Distribution extends Chart {
                     }
                 }
 
-                let row = table.insert([pointId, unit, suvDate, value, pointX, pointY, plotAngle, valueY]);
+                let legend = formatTime(suvDate); //niceDate
+                let row = table.insert([pointId, unit, legend, suvDate, value, pointX, pointY, plotAngle, valueY]);
             }
         }
 
@@ -186,8 +189,18 @@ export class Distribution extends Chart {
             let suvDate = row.get('SuvDate');
             let niceDate = formatTime(suvDate);
 
+            let pointId = row.get('PointId');
+            let unit = row.get('Unit');
+            let legend = row.get('Legend');
+
             if (!lineMap[niceDate]) {
-                lineMap[niceDate] = {data: [row.get()]};//#初始化线
+                //lineMap[niceDate] = {data: [row.get()]};//#初始化线
+                let lineObject = new LineObject(pointId, unit, legend);//#初始化线
+                lineObject.data = [row.get()];
+                lineObject.table = table;
+                lineObject.xModel = xModel;
+                lineObject.yModel = yModel;
+                lineMap[niceDate] = lineObject;
             } else {
                 lineMap[niceDate].data.push(row.get());//#追加线数据
             }
@@ -260,8 +273,7 @@ export class Distribution extends Chart {
             for (let i = 0; i < len; i++) {
                 let time = lineKeys[i];
                 let lineObj = lineMap[time];
-                lineObj.time = time;
-                lineObj.legend = legendManager.add(time);
+                lineObj.legendObject = legendManager.add(time);
                 this.drawLineClick(lineObj);
                 this.drawLegendClick(lineObj);
                 if (!this.data.dataYList) this.drawPointClick(lineObj);
@@ -276,11 +288,11 @@ export class Distribution extends Chart {
     protected initPoints(): void {
     }
 
-    protected drawLineClick(line: any): void {
+    protected drawLineClick(line: LineObject): void {
         let {modelMap, table} = this;
 
         let points = line.data;
-        let legend = line.legend;
+        let legend = line.legendObject;
         let isHorizontal = this.isHorizontal;
         let scaleX = modelMap[this.xAxisName].scale;
         let scaleY = modelMap[this.yAxisName].scale;
@@ -310,11 +322,11 @@ export class Distribution extends Chart {
         }
     }
 
-    protected drawPointClick(line: any): void {
+    protected drawPointClick(line: LineObject): void {
         let {modelMap, table} = this;
 
         let points = line.data;
-        let legend = line.legend;
+        let legend = line.legendObject;
         let isHorizontal = this.isHorizontal;
         let scaleX = modelMap[this.xAxisName].scale;
         let scaleY = modelMap[this.yAxisName].scale;
@@ -331,9 +343,9 @@ export class Distribution extends Chart {
         }
     }
 
-    protected drawLegendClick(line: any): void {
-        let {time, legend} = line;
-        legend.drawLegend(this.legendsComponent, time.substr(0, 10));//time.substr(0, 10)
+    protected drawLegendClick(line: LineObject): void {
+        let {legend, legendObject} = line;
+        legendObject.drawLegend(this.legendsComponent, legend.substr(0, 10));//time.substr(0, 10)
     }
 
     protected onClickTime(time: string): void {
@@ -346,8 +358,7 @@ export class Distribution extends Chart {
             console.log('onClickTime:', time);
 
             let lineObj = lineMap[time];
-            lineObj.time = time;
-            lineObj.legend = legendManager.add(time);
+            lineObj.legendObject = legendManager.add(time);
 
             this.drawLineClick(lineObj);
             this.drawLegendClick(lineObj);
