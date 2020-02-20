@@ -31,12 +31,12 @@ export class LineObject {
         this.id = LineObject.id(pointId, unit, legend);
     }
 
-    draw(lineComponent: Component, pointComponent: Component) {
-        this.drawLine(lineComponent);
-        this.drawPoint(pointComponent);
+    draw(lineComponent: Component, pointComponent: Component, newLegendObject?: Legend) {
+        this.drawLine(lineComponent, newLegendObject);
+        this.drawPoint(pointComponent, newLegendObject);
     }
 
-    drawLine(component: Component) {
+    drawLine(component: Component, newLegendObject?: Legend) {
         let {table, xModel, yModel, data, legendObject} = this;
         let {fieldName: xFieldName, scale: xScale} = xModel;
         let {fieldName: yFieldName, scale: yScale} = yModel;
@@ -52,12 +52,19 @@ export class LineObject {
             .y(function (d: any, index: number, data: any[]) {
                 //console.log("yFieldName:", yFieldName, table.field(yFieldName, d));
                 return yScale(table.field(yFieldName, d));
+            })
+            .defined(function (d: any) {
+                return table.field(xFieldName, d) !== null && table.field(yFieldName, d) !== null;
             });
 
-        component.append(new Path({d: <string>lineGenerator(data), stroke: legendObject.color, class: 'line'}));
+        if(newLegendObject) {
+            component.append(new Path({d: <string>lineGenerator(data), stroke: newLegendObject.color, class: 'line'}));
+        } else {
+            component.append(new Path({d: <string>lineGenerator(data), stroke: legendObject.color, class: 'line'}));
+        }
     }
 
-    drawPoint(component: Component) {
+    drawPoint(component: Component, newLegendObject?: Legend) {
         let {table, xModel, yModel, data, legendObject} = this;
         let {fieldName: xFieldName, scale: xScale} = xModel;
         let {fieldName: yFieldName, scale: yScale} = yModel;

@@ -3013,8 +3013,6 @@ var _wpcharts = (function (exports, d3) {
             if (warningValue && warningValue.Unit && warningValue.Values && warningValue.Values.length > 0) {
                 this.warningValueComponent = this.gridComponent.append(new Component({ attribute: { class: 'warning-value' } }));
             }
-            var bottomView = this.bottomComponent.getView();
-            this.bottomComponent.append(new Rect({ width: bottomView.width - bottomView.left - bottomView.right, height: bottomView.height, class: 'bottom-rect', fill: 'white' }).setView({}));
         };
         Chart.prototype.initBackground = function () {
             var _a = this.gridComponent.getView(), gw = _a.width, gh = _a.height;
@@ -4260,11 +4258,11 @@ var _wpcharts = (function (exports, d3) {
             this.legend = legend;
             this.id = LineObject.id(pointId, unit, legend);
         }
-        LineObject.prototype.draw = function (lineComponent, pointComponent) {
-            this.drawLine(lineComponent);
-            this.drawPoint(pointComponent);
+        LineObject.prototype.draw = function (lineComponent, pointComponent, newLegendObject) {
+            this.drawLine(lineComponent, newLegendObject);
+            this.drawPoint(pointComponent, newLegendObject);
         };
-        LineObject.prototype.drawLine = function (component) {
+        LineObject.prototype.drawLine = function (component, newLegendObject) {
             var _a = this, table = _a.table, xModel = _a.xModel, yModel = _a.yModel, data = _a.data, legendObject = _a.legendObject;
             var xFieldName = xModel.fieldName, xScale = xModel.scale;
             var yFieldName = yModel.fieldName, yScale = yModel.scale;
@@ -4276,10 +4274,18 @@ var _wpcharts = (function (exports, d3) {
             })
                 .y(function (d, index, data) {
                 return yScale(table.field(yFieldName, d));
+            })
+                .defined(function (d) {
+                return table.field(xFieldName, d) !== null && table.field(yFieldName, d) !== null;
             });
-            component.append(new Path({ d: lineGenerator(data), stroke: legendObject.color, class: 'line' }));
+            if (newLegendObject) {
+                component.append(new Path({ d: lineGenerator(data), stroke: newLegendObject.color, class: 'line' }));
+            }
+            else {
+                component.append(new Path({ d: lineGenerator(data), stroke: legendObject.color, class: 'line' }));
+            }
         };
-        LineObject.prototype.drawPoint = function (component) {
+        LineObject.prototype.drawPoint = function (component, newLegendObject) {
             var _a = this, table = _a.table, xModel = _a.xModel, yModel = _a.yModel, data = _a.data, legendObject = _a.legendObject;
             var xFieldName = xModel.fieldName, xScale = xModel.scale;
             var yFieldName = yModel.fieldName, yScale = yModel.scale;
@@ -5124,7 +5130,6 @@ var _wpcharts = (function (exports, d3) {
             _this.points = [];
             _this.pointsPosition = [];
             _this.lines = {};
-            _this.timeIndex = [];
             var schema = {
                 name: Distribution.clazz,
                 properties: {
@@ -5261,6 +5266,12 @@ var _wpcharts = (function (exports, d3) {
                     lineMap[niceDate].data.push(row.get());
                 }
             }
+        };
+        Distribution.prototype.initView = function () {
+            _super.prototype.initView.call(this);
+            var bottomView = this.bottomComponent.getView();
+            this.bottomComponent.append(new Rect({ width: bottomView.width - bottomView.left - bottomView.right, height: bottomView.height, class: 'bottom-rect', fill: 'white' }).setView({}));
+            this.moveLineComponent = this.gridComponent.append(new Component({ attribute: { class: 'move-line' } }));
         };
         Distribution.prototype.initLegend = function () {
         };
@@ -5433,6 +5444,7 @@ var _wpcharts = (function (exports, d3) {
                 var line = _this.queryTimeLine(x);
                 if (line) {
                     _this.onClickTime(line.legend);
+                    _this.clearMoveLine();
                 }
             });
             this.bottomComponent.on('mouseover', function () {
@@ -5442,13 +5454,24 @@ var _wpcharts = (function (exports, d3) {
             this.bottomComponent.on('mouseout', function () {
                 d3.event.preventDefault();
                 vline.hide();
+                _this.clearMoveLine();
             });
+            var timerMouseMoveEvent;
             this.bottomComponent.on('mousemove', function (datum, index, groups) {
                 d3.event.preventDefault();
                 var mouse = d3.mouse(groups[index]);
                 var x = mouse[0], y = mouse[1];
-                var xShow = x - bottomView.left;
-                vline.attr({ x1: xShow, x2: xShow });
+                x = x - bottomView.left;
+                vline.attr({ x1: x, x2: x });
+                clearTimeout(timerMouseMoveEvent);
+                timerMouseMoveEvent = setTimeout(function () {
+                    var line = _this.queryTimeLine(x);
+                    if (line) {
+                        console.log('move-line:', line.legend);
+                        _this.clearMoveLine();
+                        _this.showMoveLine(line);
+                    }
+                }, 200);
             });
             this.svg.on(TooltipsEvent, function (datum, index, groups) {
                 var _a = d3.event.detail, mouse = _a.mouse, tooltips = _a.target;
@@ -5552,6 +5575,18 @@ var _wpcharts = (function (exports, d3) {
                 console.log('timeEvent:current:not-find:', formatTime(xValue));
             }
             return null;
+        };
+        Distribution.prototype.showMoveLine = function (line) {
+            var l = new Legend({
+                name: 'solid_circle',
+                color: 'Red',
+                generator: d3.symbol().type(d3.symbolCircle),
+                fill: true
+            });
+            line.drawLine(this.moveLineComponent, l);
+        };
+        Distribution.prototype.clearMoveLine = function () {
+            d3.select(this.selector).select(".move-line").selectAll("*").remove();
         };
         Distribution.clazz = "distribution";
         Distribution.title = "分布图";

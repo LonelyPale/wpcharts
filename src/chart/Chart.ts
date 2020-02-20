@@ -536,9 +536,6 @@ export abstract class Chart implements IChart {
             this.warningValueComponent = <Component>this.gridComponent.append(new Component({attribute: {class: 'warning-value'}}));
         }
 
-        //# 分布图: 时间轴移动鼠标时的事件需要的范围
-        let bottomView = this.bottomComponent.getView();
-        this.bottomComponent.append(new Rect({width: bottomView.width - bottomView.left - bottomView.right, height: bottomView.height, class:'bottom-rect', fill: 'white'}).setView({}));
     }
 
     //# 局部背景, 中央绘画区, 用于为事件提供背景

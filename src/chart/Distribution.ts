@@ -17,6 +17,9 @@ import {View} from "../view/View";
 import {TimeFieldName, TimeModelName} from "../constant";
 import {LineObject} from "../object/LineObject";
 import {Line} from "../svg/Line";
+import {Rect} from "../svg/Rect";
+import {Component} from "../component/Component";
+import {Legend} from "../component/legend/Legend";
 
 export class Distribution extends Chart {
 
@@ -32,7 +35,8 @@ export class Distribution extends Chart {
     pointsPosition: number[] = []; //所有测点集坐标位置
 
     lines: any = {}; //已绘制的线
-    timeIndex: Date[] = [];
+
+    moveLineComponent!: Component; //粘合移动线
 
     constructor(selector: string) {
         super(selector);
@@ -209,6 +213,17 @@ export class Distribution extends Chart {
             }
         }
 
+    }
+
+    protected initView(): void {
+        super.initView();
+
+        //# 分布图: 时间轴移动鼠标时的事件需要的范围
+        let bottomView = this.bottomComponent.getView();
+        this.bottomComponent.append(new Rect({width: bottomView.width - bottomView.left - bottomView.right, height: bottomView.height, class:'bottom-rect', fill: 'white'}).setView({}));
+
+        //# 粘合移动线
+        this.moveLineComponent = <Component>this.gridComponent.append(new Component({attribute: {class: 'move-line'}}));
     }
 
     protected initLegend(): void {
@@ -402,9 +417,10 @@ export class Distribution extends Chart {
             d3.event.preventDefault();
             let mouse = d3.mouse(groups[index]);
             let [x, y] = mouse;
-            let line = this.queryTimeLine(x);
+            let line = this.queryTimeLine(x);//点击时不需要减去左边的宽度
             if(line) {
                 this.onClickTime(line.legend);
+                this.clearMoveLine();
             }
         });
         //鼠标移入
@@ -416,15 +432,26 @@ export class Distribution extends Chart {
         this.bottomComponent.on('mouseout', () => {
             d3.event.preventDefault();
             vline.hide();
+            this.clearMoveLine();
         });
         //鼠标移动
+        let timerMouseMoveEvent: any;
         this.bottomComponent.on('mousemove', (datum: any, index: number, groups: any[] | ArrayLike<any>) => {
             d3.event.preventDefault();
             let mouse = d3.mouse(groups[index]);
             let [x, y] = mouse;
-            let xShow = x - bottomView.left;
-            vline.attr({x1: xShow, x2: xShow});
+            x = x - bottomView.left;//移动时需要减去左边的宽度
+            vline.attr({x1: x, x2: x});
 
+            clearTimeout(timerMouseMoveEvent);
+            timerMouseMoveEvent = setTimeout(() => {
+                let line = this.queryTimeLine(x);
+                if(line) {
+                    console.log('move-line:', line.legend);
+                    this.clearMoveLine();
+                    this.showMoveLine(line);
+                }
+            }, 200);
         });
 
         //# 提示信息
@@ -543,6 +570,23 @@ export class Distribution extends Chart {
         }
 
         return null;
+    }
+
+    //显示移动线
+    showMoveLine(line: LineObject) {
+        //line.draw(this.moveLineComponent, this.moveLineComponent);
+        let l = new Legend({
+            name: 'solid_circle',
+            color: 'Red',
+            generator: d3.symbol().type(d3.symbolCircle),
+            fill: true
+        });
+        line.drawLine(this.moveLineComponent, l);
+    }
+
+    //清除移动线
+    clearMoveLine() {
+        d3.select(this.selector).select(".move-line").selectAll("*").remove();
     }
 
 }
