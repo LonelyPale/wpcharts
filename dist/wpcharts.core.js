@@ -3013,6 +3013,8 @@ var _wpcharts = (function (exports, d3) {
             if (warningValue && warningValue.Unit && warningValue.Values && warningValue.Values.length > 0) {
                 this.warningValueComponent = this.gridComponent.append(new Component({ attribute: { class: 'warning-value' } }));
             }
+            var bottomView = this.bottomComponent.getView();
+            this.bottomComponent.append(new Rect({ width: bottomView.width - bottomView.left - bottomView.right, height: bottomView.height, class: 'bottom-rect', fill: 'white' }).setView({}));
         };
         Chart.prototype.initBackground = function () {
             var _a = this.gridComponent.getView(), gw = _a.width, gh = _a.height;
@@ -5122,6 +5124,7 @@ var _wpcharts = (function (exports, d3) {
             _this.points = [];
             _this.pointsPosition = [];
             _this.lines = {};
+            _this.timeIndex = [];
             var schema = {
                 name: Distribution.clazz,
                 properties: {
@@ -5140,6 +5143,7 @@ var _wpcharts = (function (exports, d3) {
             return _this;
         }
         Distribution.prototype.initData = function () {
+            console.log(123);
             this.clear();
             var _a = this, data = _a.option.data, table = _a.table;
             this.data = clone(data && data.pointCategories ? data : data.object);
@@ -5378,8 +5382,8 @@ var _wpcharts = (function (exports, d3) {
             }
         };
         Distribution.prototype.drawLegendClick = function (line) {
-            var legend = line.legend, legendObject = line.legendObject;
-            legendObject.drawLegend(this.legendsComponent, legend.substr(0, 10));
+            var pointId = line.pointId, unit = line.unit, legend = line.legend, legendObject = line.legendObject;
+            legendObject.drawLegend(this.legendsComponent, legend.substr(0, 10), 60, { pointId: pointId, unit: unit, legend: legend });
         };
         Distribution.prototype.onClickTime = function (time) {
             var _a = this, legendManager = _a.legendManager, lineMap = _a.lineMap, lines = _a.lines, isHorizontal = _a.isHorizontal, cache = _a.cache, table = _a.table;
@@ -5419,6 +5423,33 @@ var _wpcharts = (function (exports, d3) {
         Distribution.prototype.initEvent = function () {
             var _this = this;
             _super.prototype.initEvent.call(this);
+            var bottomView = this.bottomComponent.getView();
+            var vline = new Line({ y1: -(bottomView.height - 75), y2: -bottomView.height, stroke: 'red', 'stroke-width': 2 }).setView({});
+            this.bottomComponent.append(vline).hide();
+            vline.on('click', function (datum, index, groups) {
+                d3.event.preventDefault();
+                var mouse = d3.mouse(groups[index]);
+                var x = mouse[0], y = mouse[1];
+                var line = _this.queryTimeLine(x);
+                if (line) {
+                    _this.onClickTime(line.legend);
+                }
+            });
+            this.bottomComponent.on('mouseover', function () {
+                d3.event.preventDefault();
+                vline.show();
+            });
+            this.bottomComponent.on('mouseout', function () {
+                d3.event.preventDefault();
+                vline.hide();
+            });
+            this.bottomComponent.on('mousemove', function (datum, index, groups) {
+                d3.event.preventDefault();
+                var mouse = d3.mouse(groups[index]);
+                var x = mouse[0], y = mouse[1];
+                var xShow = x - bottomView.left;
+                vline.attr({ x1: xShow, x2: xShow });
+            });
             this.svg.on(TooltipsEvent, function (datum, index, groups) {
                 var _a = d3.event.detail, mouse = _a.mouse, tooltips = _a.target;
                 var _b = _this, table = _b.table, cache = _b.cache, modelMap = _b.modelMap, legendManager = _b.legendManager, parentView = _b.option.view, xAxisName = _b.xAxisName, isHorizontal = _b.isHorizontal;
@@ -5482,6 +5513,45 @@ var _wpcharts = (function (exports, d3) {
         Distribution.prototype.clear = function () {
             _super.prototype.clear.call(this);
             this.lines = [];
+        };
+        Distribution.prototype.queryTimeLine = function (xCoordinate) {
+            var timeModel = this.modelMap['time'];
+            var timeScale = timeModel.scale;
+            var xValue = timeScale.invert(xCoordinate);
+            var timeTempArray = [];
+            var timeIndex = Object.keys(this.lineMap);
+            for (var _i = 0, timeIndex_1 = timeIndex; _i < timeIndex_1.length; _i++) {
+                var timeStr = timeIndex_1[_i];
+                var time = parseTime(timeStr);
+                if (time) {
+                    var timeDifference = Math.abs(time.getTime() - xValue.getTime());
+                    if (timeDifference < day) {
+                        timeTempArray.push([time, timeDifference]);
+                    }
+                }
+            }
+            var timeSelected;
+            if (timeTempArray.length > 0) {
+                timeSelected = timeTempArray[0];
+                if (timeTempArray.length > 1) {
+                    for (var i = 1; i < timeTempArray.length; i++) {
+                        if (timeSelected[1] > timeTempArray[i][1]) {
+                            timeSelected = timeTempArray[i];
+                        }
+                    }
+                }
+            }
+            if (timeSelected) {
+                var time = formatTime(timeSelected[0]);
+                var line = this.lineMap[time];
+                if (line) {
+                    return line;
+                }
+            }
+            else {
+                console.log('timeEvent:current:not-find:', formatTime(xValue));
+            }
+            return null;
         };
         Distribution.clazz = "distribution";
         Distribution.title = "分布图";

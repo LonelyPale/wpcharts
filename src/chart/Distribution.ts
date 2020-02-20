@@ -1,7 +1,7 @@
-import d3 from "d3";
+import d3, {ArrayLike} from "d3";
 import {Chart, ChartConstructor} from "./Chart";
 import {clone} from "../util/common";
-import {formatTime, parseTime, TimeModel} from "../model/TimeModel";
+import {day, formatTime, parseTime, TimeModel} from "../model/TimeModel";
 import {LinearModel} from "../model/LinearModel";
 import {TimeAxis} from "../component/axis/TimeAxis";
 import {OrdinalAxis} from "../component/axis/OrdinalAxis";
@@ -16,6 +16,7 @@ import {lately} from "../util/array";
 import {View} from "../view/View";
 import {TimeFieldName, TimeModelName} from "../constant";
 import {LineObject} from "../object/LineObject";
+import {Line} from "../svg/Line";
 
 export class Distribution extends Chart {
 
@@ -31,6 +32,7 @@ export class Distribution extends Chart {
     pointsPosition: number[] = []; //所有测点集坐标位置
 
     lines: any = {}; //已绘制的线
+    timeIndex: Date[] = [];
 
     constructor(selector: string) {
         super(selector);
@@ -52,7 +54,7 @@ export class Distribution extends Chart {
         this.table = this.db.create(schema);
     }
 
-    protected initData(): void {
+    protected initData(): void {console.log(123);
         this.clear();
 
         let {option: {data}, table} = this;
@@ -193,6 +195,7 @@ export class Distribution extends Chart {
             let unit = row.get('Unit');
             let legend = row.get('Legend');
 
+            //# 不存在时间相同的多条线，一个时间只有一条线。
             if (!lineMap[niceDate]) {
                 //lineMap[niceDate] = {data: [row.get()]};//#初始化线
                 let lineObject = new LineObject(pointId, unit, legend);//#初始化线
@@ -344,8 +347,8 @@ export class Distribution extends Chart {
     }
 
     protected drawLegendClick(line: LineObject): void {
-        let {legend, legendObject} = line;
-        legendObject.drawLegend(this.legendsComponent, legend.substr(0, 10));//time.substr(0, 10)
+        let {pointId, unit, legend, legendObject} = line;
+        legendObject.drawLegend(this.legendsComponent, legend.substr(0, 10), 60, {pointId, unit, legend});
     }
 
     protected onClickTime(time: string): void {
@@ -391,6 +394,40 @@ export class Distribution extends Chart {
     protected initEvent() {
         super.initEvent();
 
+        //# 时间轴粘合线
+        let bottomView = this.bottomComponent.getView();
+        let vline = new Line({y1: -(bottomView.height - 75), y2: -bottomView.height, stroke: 'red', 'stroke-width': 2}).setView({});
+        this.bottomComponent.append(vline).hide();
+        vline.on('click', (datum: any, index: number, groups: any[] | ArrayLike<any>) => {
+            d3.event.preventDefault();
+            let mouse = d3.mouse(groups[index]);
+            let [x, y] = mouse;
+            let line = this.queryTimeLine(x);
+            if(line) {
+                this.onClickTime(line.legend);
+            }
+        });
+        //鼠标移入
+        this.bottomComponent.on('mouseover', () => {
+            d3.event.preventDefault();
+            vline.show();
+        });
+        //鼠标移出
+        this.bottomComponent.on('mouseout', () => {
+            d3.event.preventDefault();
+            vline.hide();
+        });
+        //鼠标移动
+        this.bottomComponent.on('mousemove', (datum: any, index: number, groups: any[] | ArrayLike<any>) => {
+            d3.event.preventDefault();
+            let mouse = d3.mouse(groups[index]);
+            let [x, y] = mouse;
+            let xShow = x - bottomView.left;
+            vline.attr({x1: xShow, x2: xShow});
+
+        });
+
+        //# 提示信息
         this.svg.on(TooltipsEvent, (datum: any, index: number, groups: any) => {
             let {detail: {mouse, target: tooltips}} = d3.event;
 
@@ -463,4 +500,49 @@ export class Distribution extends Chart {
         super.clear();
         this.lines = [];
     }
+
+    queryTimeLine(xCoordinate: number): LineObject | null {
+        let timeModel = this.modelMap['time'];
+        let timeScale = timeModel.scale;
+        let xValue = <Date>timeScale.invert(xCoordinate);
+
+        let timeTempArray: any[][] = [];
+        let timeIndex = Object.keys(this.lineMap);
+        for(let timeStr of timeIndex) {
+            let time: Date | null = parseTime(timeStr);
+            if(time) {
+                let timeDifference: number = Math.abs(time.getTime() - xValue.getTime());
+                if(timeDifference < day) {
+                    timeTempArray.push([time, timeDifference]);
+                }
+            }
+        }
+        //console.log(333, timeTempArray);
+
+        let timeSelected;
+        if(timeTempArray.length > 0) {
+            timeSelected = timeTempArray[0];
+            if(timeTempArray.length > 1) {
+                for(let i = 1; i < timeTempArray.length; i++) {
+                    if(timeSelected[1] > timeTempArray[i][1]) {
+                        timeSelected = timeTempArray[i];
+                    }
+                }
+            }
+        }
+        //console.log(444, timeSelected, formatTime(timeSelected[0]));
+
+        if(timeSelected) {
+            let time = formatTime(timeSelected[0]);
+            let line = this.lineMap[time];
+            if(line) {
+                return line;
+            }
+        } else {
+            console.log('timeEvent:current:not-find:', formatTime(xValue));
+        }
+
+        return null;
+    }
+
 }
