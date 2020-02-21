@@ -43,6 +43,8 @@ export class LineObject {
 
         if (!data || data.length === 0) return;//跳过没有数据的线
 
+        legendObject = newLegendObject || legendObject;
+
         let lineGenerator = d3.line()
             .x(function (d: any, index: number, data: any[]) {
                 //console.log(d, index, data);
@@ -57,11 +59,7 @@ export class LineObject {
                 return table.field(xFieldName, d) !== null && table.field(yFieldName, d) !== null;
             });
 
-        if(newLegendObject) {
-            component.append(new Path({d: <string>lineGenerator(data), stroke: newLegendObject.color, class: 'line'}));
-        } else {
-            component.append(new Path({d: <string>lineGenerator(data), stroke: legendObject.color, class: 'line'}));
-        }
+        component.append(new Path({d: <string>lineGenerator(data), stroke: legendObject.color, class: 'line'}));
     }
 
     drawPoint(component: Component, newLegendObject?: Legend) {
@@ -70,6 +68,8 @@ export class LineObject {
         let {fieldName: yFieldName, scale: yScale} = yModel;
 
         if (!data || data.length === 0) return;//跳过没有数据的线
+
+        legendObject = newLegendObject || legendObject;
 
         let pointsLength = data.length;
         let pointsSpace = Math.floor(data.length / 10);

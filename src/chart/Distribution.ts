@@ -423,16 +423,16 @@ export class Distribution extends Chart {
                 this.clearMoveLine();
             }
         });
-        //鼠标移入
-        this.bottomComponent.on('mouseover', () => {
+        //鼠标移入 mouseover
+        this.bottomComponent.on('mouseenter', () => {
             d3.event.preventDefault();
             vline.show();
         });
-        //鼠标移出
-        this.bottomComponent.on('mouseout', () => {
+        //鼠标移出 mouseout
+        this.bottomComponent.on('mouseleave', () => {
             d3.event.preventDefault();
             vline.hide();
-            this.clearMoveLine();
+            setTimeout(() => this.clearMoveLine(), 200);
         });
         //鼠标移动
         let timerMouseMoveEvent: any;
@@ -574,14 +574,13 @@ export class Distribution extends Chart {
 
     //显示移动线
     showMoveLine(line: LineObject) {
-        //line.draw(this.moveLineComponent, this.moveLineComponent);
-        let l = new Legend({
-            name: 'solid_circle',
+        let legendObject = new Legend({
+            name: 'solid_star',
             color: 'Red',
-            generator: d3.symbol().type(d3.symbolCircle),
+            generator: d3.symbol().type(d3.symbolStar),
             fill: true
         });
-        line.drawLine(this.moveLineComponent, l);
+        line.draw(this.moveLineComponent, this.moveLineComponent, legendObject);
     }
 
     //清除移动线

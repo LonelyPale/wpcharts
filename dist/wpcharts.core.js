@@ -4268,6 +4268,7 @@ var _wpcharts = (function (exports, d3) {
             var yFieldName = yModel.fieldName, yScale = yModel.scale;
             if (!data || data.length === 0)
                 return;
+            legendObject = newLegendObject || legendObject;
             var lineGenerator = d3.line()
                 .x(function (d, index, data) {
                 return xScale(table.field(xFieldName, d));
@@ -4278,12 +4279,7 @@ var _wpcharts = (function (exports, d3) {
                 .defined(function (d) {
                 return table.field(xFieldName, d) !== null && table.field(yFieldName, d) !== null;
             });
-            if (newLegendObject) {
-                component.append(new Path({ d: lineGenerator(data), stroke: newLegendObject.color, class: 'line' }));
-            }
-            else {
-                component.append(new Path({ d: lineGenerator(data), stroke: legendObject.color, class: 'line' }));
-            }
+            component.append(new Path({ d: lineGenerator(data), stroke: legendObject.color, class: 'line' }));
         };
         LineObject.prototype.drawPoint = function (component, newLegendObject) {
             var _a = this, table = _a.table, xModel = _a.xModel, yModel = _a.yModel, data = _a.data, legendObject = _a.legendObject;
@@ -4291,6 +4287,7 @@ var _wpcharts = (function (exports, d3) {
             var yFieldName = yModel.fieldName, yScale = yModel.scale;
             if (!data || data.length === 0)
                 return;
+            legendObject = newLegendObject || legendObject;
             var pointsLength = data.length;
             var pointsSpace = Math.floor(data.length / 10);
             var point, j, x, y;
@@ -5447,14 +5444,14 @@ var _wpcharts = (function (exports, d3) {
                     _this.clearMoveLine();
                 }
             });
-            this.bottomComponent.on('mouseover', function () {
+            this.bottomComponent.on('mouseenter', function () {
                 d3.event.preventDefault();
                 vline.show();
             });
-            this.bottomComponent.on('mouseout', function () {
+            this.bottomComponent.on('mouseleave', function () {
                 d3.event.preventDefault();
                 vline.hide();
-                _this.clearMoveLine();
+                setTimeout(function () { return _this.clearMoveLine(); }, 200);
             });
             var timerMouseMoveEvent;
             this.bottomComponent.on('mousemove', function (datum, index, groups) {
@@ -5577,13 +5574,13 @@ var _wpcharts = (function (exports, d3) {
             return null;
         };
         Distribution.prototype.showMoveLine = function (line) {
-            var l = new Legend({
-                name: 'solid_circle',
+            var legendObject = new Legend({
+                name: 'solid_star',
                 color: 'Red',
-                generator: d3.symbol().type(d3.symbolCircle),
+                generator: d3.symbol().type(d3.symbolStar),
                 fill: true
             });
-            line.drawLine(this.moveLineComponent, l);
+            line.draw(this.moveLineComponent, this.moveLineComponent, legendObject);
         };
         Distribution.prototype.clearMoveLine = function () {
             d3.select(this.selector).select(".move-line").selectAll("*").remove();

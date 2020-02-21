@@ -47,6 +47,16 @@ export class LegendManager {
         return this.unusedLegends.length;
     }
 
+    /**
+     d3中有7个符号生成器。
+     symbolCircle 圆形
+     symbolCross 十字架
+     symbolDiamond 菱形
+     symbolSquare 正方形
+     symbolStar 五角星
+     symbolTriangle 三角形
+     symbolWye Y形
+     **/
     static init() {
         LegendManager.legends.push(new Legend({
             name: 'solid_circle',
