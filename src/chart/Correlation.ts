@@ -31,6 +31,11 @@ export class Correlation extends Chart {
             }
         };
         this.table = this.db.create(schema);
+
+        this.state.menuStatus['直线相关拟合线'] = false;
+        this.state.menuStatus['多项式相关拟合线'] = false;
+        this.state.menuStatus['分年连线'] = false;
+        this.state.menuStatus['包络图'] = false;
     }
 
     protected initData(): void {
@@ -166,18 +171,7 @@ export class Correlation extends Chart {
         super.initMenu();
 
         let self = this;
-        let {menu: rootMenu, modelMap, xAxisName, yAxisName, state} = this;
-        let {linesComponent, legendsComponent, legendManager, data} = this;
-
-        let scaleX = modelMap[xAxisName].scale;
-        let scaleY = modelMap[yAxisName].scale;
-        let lineGenerator = d3.line()
-            .x(function (d: any) {
-                return scaleX(parseFloat(d.valueX));
-            })
-            .y(function (d: any) {
-                return scaleY(parseFloat(d.valueY));
-            });
+        let {menu: rootMenu, state} = this;
 
         rootMenu.append(new MenuSeparator());
 
@@ -186,100 +180,47 @@ export class Correlation extends Chart {
             type: this.state.menuStatus['直线相关拟合线'] ? 'check' : 'normal',
             action() {
                 let menuType = '直线相关拟合线';
-                console.log(menuType);
-                let flag = state.menuStatus[menuType];
-                if(flag) {
-                    state.menuStatus[menuType] = false;
-                } else {
-                    state.menuStatus[menuType] = true;
-                }
-                let pointsLine = data.lineDataList;
-                let typeLine = 'line';
-                legendManager.add(typeLine).drawLegend(legendsComponent, '直线相关拟合线');
-                let legendLine = legendManager.get(typeLine);
-                if (pointsLine && pointsLine.length > 0) {
-                    linesComponent.append(new Path({
-                        d: <string>lineGenerator(pointsLine),
-                        fill: 'none',
-                        stroke: legendLine.color,
-                        'stroke-width': 1,
-                        class: 'line'
-                    }));
-                }
+                console.log(menuType, !state.menuStatus[menuType]);
+                state.menuStatus[menuType] = !state.menuStatus[menuType];
+                self.reset();
+                self.reloadHistory();
             }
         }));
 
         rootMenu.append(new MenuItem({
             text: '多项式相关拟合线',
-            type: 'check',
+            type: this.state.menuStatus['多项式相关拟合线'] ? 'check' : 'normal',
             action() {
-                console.log("多项式相关拟合线");
-                //曲线
-                let pointsPolynomial = data.polynomialDataList;
-                let typePolynomial = 'polynomial';
-                legendManager.add(typePolynomial).drawLegend(legendsComponent, '多项式相关拟合线');
-                let legendPolynomial = legendManager.get(typePolynomial);
-                if (pointsPolynomial && pointsPolynomial.length > 0) {
-                    linesComponent.append(new Path({
-                        d: <string>lineGenerator(pointsPolynomial),
-                        fill: 'none',
-                        stroke: legendPolynomial.color,
-                        'stroke-width': 1,
-                        class: 'line'
-                    }));
-                }
+                let menuType = '多项式相关拟合线';
+                console.log(menuType, !state.menuStatus[menuType]);
+                state.menuStatus[menuType] = !state.menuStatus[menuType];
+                self.reset();
+                self.reloadHistory();
             }
         }));
 
         rootMenu.append(new MenuItem({
             text: '分年连线',
+            type: this.state.menuStatus['分年连线'] ? 'check' : 'normal',
             action() {
-                console.log("分年连线");
-
+                let menuType = '分年连线';
+                console.log(menuType, !state.menuStatus[menuType]);
+                state.menuStatus[menuType] = !state.menuStatus[menuType];
+                self.reset();
+                self.reloadHistory();
             }
         }));
 
         //使用 d3.polygonHull 计算凸包(可以包含重复的点，能正确计算)
         rootMenu.append(new MenuItem({
             text: '包络图',
+            type: this.state.menuStatus['包络图'] ? 'check' : 'normal',
             action() {
-                console.log("包络图");
-
-                let {modelMap, data, xAxisName, yAxisName} = self;
-
-                let scaleX = modelMap[xAxisName].scale;
-                let scaleY = modelMap[yAxisName].scale;
-
-                let scatterDataList = data.scatterDataList;
-                let points: Array<[number, number]> = [];
-
-                for (let i = 0, len = scatterDataList.length; i < len; i++) {
-                    let item = scatterDataList[i];
-                    let valueX = scaleX(parseFloat(item.valueX));
-                    let valueY = scaleY(parseFloat(item.valueY));
-                    points.push([valueX, valueY]);
-                }
-
-                let pointsConvexHull: Array<[number, number]> | null = d3.polygonHull(points);
-
-                let lineGenerator = d3.line()
-                    .x(function (d: [number, number]) {
-                        return (d[0]);
-                    })
-                    .y(function (d: [number, number]) {
-                        return (d[1]);
-                    });
-
-                if (pointsConvexHull && pointsConvexHull.length > 0) {
-                    let color = '#FF9966';// #FFFF00 #FF9966 #FF9999
-                    self.pointsComponent.append(new Path({
-                        d: <string>lineGenerator(pointsConvexHull),
-                        fill: color,
-                        stroke: color,
-                        'stroke-width': 1,
-                        'fill-opacity': 0.5,
-                    }));
-                }
+                let menuType = '包络图';
+                console.log(menuType, !state.menuStatus[menuType]);
+                state.menuStatus[menuType] = !state.menuStatus[menuType];
+                self.reset();
+                self.reloadHistory();
             }
         }));
 
@@ -336,6 +277,118 @@ export class Correlation extends Chart {
         }));
         */
 
+    }
+
+    //直线相关拟合线
+    drawLinearCorrelationFitLine() {
+        let {data, legendManager, legendsComponent, linesComponent, modelMap, xAxisName, yAxisName} = this;
+
+        let scaleX = modelMap[xAxisName].scale;
+        let scaleY = modelMap[yAxisName].scale;
+        let lineGenerator = d3.line()
+            .x(function (d: any) {
+                return scaleX(parseFloat(d.valueX));
+            })
+            .y(function (d: any) {
+                return scaleY(parseFloat(d.valueY));
+            });
+
+        let pointsLine = data.lineDataList;
+        let typeLine = 'line';
+        legendManager.add(typeLine).drawLegend(legendsComponent, '直线相关拟合线');
+        let legendLine = legendManager.get(typeLine);
+        if (pointsLine && pointsLine.length > 0) {
+            linesComponent.append(new Path({
+                d: <string>lineGenerator(pointsLine),
+                fill: 'none',
+                stroke: legendLine.color,
+                'stroke-width': 1,
+                class: 'line'
+            }));
+        }
+    }
+
+    //多项式相关拟合线
+    drawPolynomialCorrelationFitLine() {
+        let {data, legendManager, legendsComponent, linesComponent, modelMap, xAxisName, yAxisName} = this;
+
+        let scaleX = modelMap[xAxisName].scale;
+        let scaleY = modelMap[yAxisName].scale;
+        let lineGenerator = d3.line()
+            .x(function (d: any) {
+                return scaleX(parseFloat(d.valueX));
+            })
+            .y(function (d: any) {
+                return scaleY(parseFloat(d.valueY));
+            });
+
+        //曲线
+        let pointsPolynomial = data.polynomialDataList;
+        let typePolynomial = 'polynomial';
+        legendManager.add(typePolynomial).drawLegend(legendsComponent, '多项式相关拟合线');
+        let legendPolynomial = legendManager.get(typePolynomial);
+        if (pointsPolynomial && pointsPolynomial.length > 0) {
+            linesComponent.append(new Path({
+                d: <string>lineGenerator(pointsPolynomial),
+                fill: 'none',
+                stroke: legendPolynomial.color,
+                'stroke-width': 1,
+                class: 'line'
+            }));
+        }
+    }
+
+    //分年连线
+    drawYearLine() {
+
+    }
+
+    //包络图
+    drawEnvelopeChart() {
+        let {modelMap, data, xAxisName, yAxisName} = this;
+
+        let scaleX = modelMap[xAxisName].scale;
+        let scaleY = modelMap[yAxisName].scale;
+
+        let scatterDataList = data.scatterDataList;
+        let points: Array<[number, number]> = [];
+
+        for (let i = 0, len = scatterDataList.length; i < len; i++) {
+            let item = scatterDataList[i];
+            let valueX = scaleX(parseFloat(item.valueX));
+            let valueY = scaleY(parseFloat(item.valueY));
+            points.push([valueX, valueY]);
+        }
+
+        let pointsConvexHull: Array<[number, number]> | null = d3.polygonHull(points);
+
+        let lineGenerator = d3.line()
+            .x(function (d: [number, number]) {
+                return (d[0]);
+            })
+            .y(function (d: [number, number]) {
+                return (d[1]);
+            });
+
+        if (pointsConvexHull && pointsConvexHull.length > 0) {
+            let color = '#FF9966';// #FFFF00 #FF9966 #FF9999
+            this.pointsComponent.append(new Path({
+                d: <string>lineGenerator(pointsConvexHull),
+                fill: color,
+                stroke: color,
+                'stroke-width': 1,
+                'fill-opacity': 0.5,
+            }));
+        }
+
+    }
+
+    reloadHistory() {
+        let {menuStatus} = this.state;
+        if(menuStatus['直线相关拟合线']) this.drawLinearCorrelationFitLine();
+        if(menuStatus['多项式相关拟合线']) this.drawPolynomialCorrelationFitLine();
+        if(menuStatus['分年连线']) this.drawYearLine();
+        if(menuStatus['包络图']) this.drawEnvelopeChart();
     }
 
 }
