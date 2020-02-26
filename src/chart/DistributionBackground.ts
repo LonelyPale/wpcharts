@@ -8,6 +8,8 @@ import {Distribution} from "./Distribution";
 import {Component} from "../component/Component";
 import {TimeAxis} from "../component/axis/TimeAxis";
 import {Style} from "../svg/Style";
+import {LineObject} from "../object/LineObject";
+import {Legend} from "../component/legend/Legend";
 
 export class DistributionBackground extends Distribution {
 
@@ -93,6 +95,9 @@ export class DistributionBackground extends Distribution {
             boxOrient: "horizontal"
         });
         this.topComponent.append(this.legendsComponent);
+
+        //# 粘合-移动线
+        this.moveLineComponent = <Component>this.gridComponent.append(new Component({attribute: {class: 'move-line'}}));
     }
 
     protected initBackground(): void {
@@ -160,6 +165,11 @@ export class DistributionBackground extends Distribution {
         });
 
         timeAxis.setView({width, height: 80, boxOrient: "vertical"});
+
+        //# 分布图: 时间轴移动鼠标时的事件需要的范围  - timeAxisView.left - timeAxisView.right
+        let timeAxisView = timeAxis.getView();
+        this.bottomComponent.append(new Rect({x: timeAxisView.x, width: timeAxisView.width, height: timeAxisView.height, class:'bottom-rect', fill: 'white'}).setView({}));
+
         this.bottomComponent.append(timeAxis);
     }
 
@@ -167,13 +177,16 @@ export class DistributionBackground extends Distribution {
     }
 
     protected initEvent(): void {
+        super.initEvent();
     }
 
-    protected drawLineClick(line: any): void {
+    protected drawLineClick(line: LineObject, targetComponent?: Component, newLegendObject?: Legend): void {
+        targetComponent = targetComponent || this.linesComponent;
+
         let {modelMap, table, option: {view: {left}}} = this;
 
         let points = line.data;
-        let legend = line.legend;
+        let legend = newLegendObject || line.legendObject;
 
         let scaleX = modelMap[this.xAxisName].scale;
         let scaleY = modelMap[this.yAxisName].scale;
@@ -203,7 +216,7 @@ export class DistributionBackground extends Distribution {
 
                     groupPointLength = count;
 
-                    this.linesComponent.append(new Path({
+                    targetComponent.append(new Path({
                         d: <string>lineGenerator(pointsGroup),
                         stroke: legend.color,
                         'stroke-width': 1,
@@ -212,17 +225,19 @@ export class DistributionBackground extends Distribution {
                     }));
                 }
             } else {
-                this.linesComponent.append(new Path({d: <string>lineGenerator(points), stroke: legend.color, 'stroke-width': 1, fill: 'none', class: 'line'}));
+                targetComponent.append(new Path({d: <string>lineGenerator(points), stroke: legend.color, 'stroke-width': 1, fill: 'none', class: 'line'}));
             }
         }
 
     }
 
-    protected drawPointClick(line: any) {
+    protected drawPointClick(line: LineObject, targetComponent?: Component, newLegendObject?: Legend) {
+        targetComponent = targetComponent || this.linesComponent;
+
         let {modelMap, table, option: {view: {left}}} = this;
 
         let points = line.data;
-        let legend = line.legend;
+        let legend = newLegendObject || line.legendObject;
 
         let scaleX = modelMap[this.xAxisName].scale;
         let scaleY = modelMap[this.yAxisName].scale;
@@ -244,8 +259,20 @@ export class DistributionBackground extends Distribution {
             let x2 = pointX * this.zoom - left;
             let y2 = pointY * this.zoom;
 
-            this.linesComponent.append(new Line({x1: x1, y1: y1, x2: x2, y2: y2, stroke: legend.color, class: 'line'}));
+            targetComponent.append(new Line({x1: x1, y1: y1, x2: x2, y2: y2, stroke: legend.color, class: 'line'}));
         }
+    }
+
+    //显示移动线
+    showMoveLine(line: LineObject) {
+        let legendObject = new Legend({
+            name: 'solid_star',
+            color: 'Red',
+            generator: d3.symbol().type(d3.symbolStar),
+            fill: true
+        });
+        this.drawLineClick(line, this.moveLineComponent, legendObject);
+        if (!this.data.dataYList) this.drawPointClick(line, this.moveLineComponent, legendObject);
     }
 
 }

@@ -218,11 +218,7 @@ export class Distribution extends Chart {
     protected initView(): void {
         super.initView();
 
-        //# 分布图: 时间轴移动鼠标时的事件需要的范围
-        let bottomView = this.bottomComponent.getView();
-        this.bottomComponent.append(new Rect({width: bottomView.width - bottomView.left - bottomView.right, height: bottomView.height, class:'bottom-rect', fill: 'white'}).setView({}));
-
-        //# 粘合移动线
+        //# 粘合-移动线
         this.moveLineComponent = <Component>this.gridComponent.append(new Component({attribute: {class: 'move-line'}}));
     }
 
@@ -258,6 +254,10 @@ export class Distribution extends Chart {
             xAxis = new LinearAxis({model: xAxisModel, type: "axisBottom"}).setView({width, height: 20});
             this.drawDottedLine(xAxisModel.tickValues.length - 1, 'vertical');
         }
+
+        //# 分布图: 时间轴移动鼠标时的事件需要的范围  - timeAxisView.left - timeAxisView.right
+        let timeAxisView = timeAxis.getView();
+        this.bottomComponent.append(new Rect({x: timeAxisView.x, width: timeAxisView.width, height: timeAxisView.height, class:'bottom-rect', fill: 'white'}).setView({}));
 
         this.bottomComponent.append(xAxis);
         this.bottomComponent.append(timeAxis);
@@ -417,6 +417,12 @@ export class Distribution extends Chart {
             d3.event.preventDefault();
             let mouse = d3.mouse(groups[index]);
             let [x, y] = mouse;
+
+            //垂直图时要计算偏移
+            if(!this.isHorizontal) {
+                x += 200;
+            }console.log(x);
+
             let line = this.queryTimeLine(x);//点击时不需要减去左边的宽度
             if(line) {
                 this.onClickTime(line.legend);
@@ -432,7 +438,7 @@ export class Distribution extends Chart {
         this.bottomComponent.on('mouseleave', () => {
             d3.event.preventDefault();
             vline.hide();
-            setTimeout(() => this.clearMoveLine(), 200);
+            setTimeout(() => this.clearMoveLine(), 100);
         });
         //鼠标移动
         let timerMouseMoveEvent: any;
@@ -443,6 +449,11 @@ export class Distribution extends Chart {
             x = x - bottomView.left;//移动时需要减去左边的宽度
             vline.attr({x1: x, x2: x});
 
+            //垂直图时要计算偏移
+            if(!this.isHorizontal) {
+                x += 200;
+            }
+
             clearTimeout(timerMouseMoveEvent);
             timerMouseMoveEvent = setTimeout(() => {
                 let line = this.queryTimeLine(x);
@@ -450,8 +461,10 @@ export class Distribution extends Chart {
                     console.log('move-line:', line.legend);
                     this.clearMoveLine();
                     this.showMoveLine(line);
+                } else {
+                    this.clearMoveLine();
                 }
-            }, 200);
+            }, 100);
         });
 
         //# 提示信息
@@ -539,7 +552,7 @@ export class Distribution extends Chart {
             let time: Date | null = parseTime(timeStr);
             if(time) {
                 let timeDifference: number = Math.abs(time.getTime() - xValue.getTime());
-                if(timeDifference < day) {
+                if(timeDifference < day * 7) {
                     timeTempArray.push([time, timeDifference]);
                 }
             }

@@ -5266,8 +5266,6 @@ var _wpcharts = (function (exports, d3) {
         };
         Distribution.prototype.initView = function () {
             _super.prototype.initView.call(this);
-            var bottomView = this.bottomComponent.getView();
-            this.bottomComponent.append(new Rect({ width: bottomView.width - bottomView.left - bottomView.right, height: bottomView.height, class: 'bottom-rect', fill: 'white' }).setView({}));
             this.moveLineComponent = this.gridComponent.append(new Component({ attribute: { class: 'move-line' } }));
         };
         Distribution.prototype.initLegend = function () {
@@ -5300,6 +5298,8 @@ var _wpcharts = (function (exports, d3) {
                 xAxis = new LinearAxis({ model: xAxisModel, type: "axisBottom" }).setView({ width: width, height: 20 });
                 this.drawDottedLine(xAxisModel.tickValues.length - 1, 'vertical');
             }
+            var timeAxisView = timeAxis.getView();
+            this.bottomComponent.append(new Rect({ x: timeAxisView.x, width: timeAxisView.width, height: timeAxisView.height, class: 'bottom-rect', fill: 'white' }).setView({}));
             this.bottomComponent.append(xAxis);
             this.bottomComponent.append(timeAxis);
         };
@@ -5438,6 +5438,10 @@ var _wpcharts = (function (exports, d3) {
                 d3.event.preventDefault();
                 var mouse = d3.mouse(groups[index]);
                 var x = mouse[0], y = mouse[1];
+                if (!_this.isHorizontal) {
+                    x += 200;
+                }
+                console.log(x);
                 var line = _this.queryTimeLine(x);
                 if (line) {
                     _this.onClickTime(line.legend);
@@ -5451,7 +5455,7 @@ var _wpcharts = (function (exports, d3) {
             this.bottomComponent.on('mouseleave', function () {
                 d3.event.preventDefault();
                 vline.hide();
-                setTimeout(function () { return _this.clearMoveLine(); }, 200);
+                setTimeout(function () { return _this.clearMoveLine(); }, 100);
             });
             var timerMouseMoveEvent;
             this.bottomComponent.on('mousemove', function (datum, index, groups) {
@@ -5460,6 +5464,9 @@ var _wpcharts = (function (exports, d3) {
                 var x = mouse[0], y = mouse[1];
                 x = x - bottomView.left;
                 vline.attr({ x1: x, x2: x });
+                if (!_this.isHorizontal) {
+                    x += 200;
+                }
                 clearTimeout(timerMouseMoveEvent);
                 timerMouseMoveEvent = setTimeout(function () {
                     var line = _this.queryTimeLine(x);
@@ -5468,7 +5475,10 @@ var _wpcharts = (function (exports, d3) {
                         _this.clearMoveLine();
                         _this.showMoveLine(line);
                     }
-                }, 200);
+                    else {
+                        _this.clearMoveLine();
+                    }
+                }, 100);
             });
             this.svg.on(TooltipsEvent, function (datum, index, groups) {
                 var _a = d3.event.detail, mouse = _a.mouse, tooltips = _a.target;
@@ -5545,7 +5555,7 @@ var _wpcharts = (function (exports, d3) {
                 var time = parseTime(timeStr);
                 if (time) {
                     var timeDifference = Math.abs(time.getTime() - xValue.getTime());
-                    if (timeDifference < day) {
+                    if (timeDifference < day * 7) {
                         timeTempArray.push([time, timeDifference]);
                     }
                 }
@@ -5661,6 +5671,7 @@ var _wpcharts = (function (exports, d3) {
                 boxOrient: "horizontal"
             });
             this.topComponent.append(this.legendsComponent);
+            this.moveLineComponent = this.gridComponent.append(new Component({ attribute: { class: 'move-line' } }));
         };
         DistributionBackground.prototype.initBackground = function () {
         };
@@ -5715,16 +5726,20 @@ var _wpcharts = (function (exports, d3) {
                 }
             });
             timeAxis.setView({ width: width, height: 80, boxOrient: "vertical" });
+            var timeAxisView = timeAxis.getView();
+            this.bottomComponent.append(new Rect({ x: timeAxisView.x, width: timeAxisView.width, height: timeAxisView.height, class: 'bottom-rect', fill: 'white' }).setView({}));
             this.bottomComponent.append(timeAxis);
         };
         DistributionBackground.prototype.initYAxis = function () {
         };
         DistributionBackground.prototype.initEvent = function () {
+            _super.prototype.initEvent.call(this);
         };
-        DistributionBackground.prototype.drawLineClick = function (line) {
+        DistributionBackground.prototype.drawLineClick = function (line, targetComponent, newLegendObject) {
+            targetComponent = targetComponent || this.linesComponent;
             var _a = this, modelMap = _a.modelMap, table = _a.table, left = _a.option.view.left;
             var points = line.data;
-            var legend = line.legend;
+            var legend = newLegendObject || line.legendObject;
             var scaleX = modelMap[this.xAxisName].scale;
             var scaleY = modelMap[this.yAxisName].scale;
             var lineGenerator = d3.line()
@@ -5748,7 +5763,7 @@ var _wpcharts = (function (exports, d3) {
                             pointsGroup.push(points[j]);
                         }
                         groupPointLength = count;
-                        this.linesComponent.append(new Path({
+                        targetComponent.append(new Path({
                             d: lineGenerator(pointsGroup),
                             stroke: legend.color,
                             'stroke-width': 1,
@@ -5758,14 +5773,15 @@ var _wpcharts = (function (exports, d3) {
                     }
                 }
                 else {
-                    this.linesComponent.append(new Path({ d: lineGenerator(points), stroke: legend.color, 'stroke-width': 1, fill: 'none', class: 'line' }));
+                    targetComponent.append(new Path({ d: lineGenerator(points), stroke: legend.color, 'stroke-width': 1, fill: 'none', class: 'line' }));
                 }
             }
         };
-        DistributionBackground.prototype.drawPointClick = function (line) {
+        DistributionBackground.prototype.drawPointClick = function (line, targetComponent, newLegendObject) {
+            targetComponent = targetComponent || this.linesComponent;
             var _a = this, modelMap = _a.modelMap, table = _a.table, left = _a.option.view.left;
             var points = line.data;
-            var legend = line.legend;
+            var legend = newLegendObject || line.legendObject;
             var scaleX = modelMap[this.xAxisName].scale;
             var scaleY = modelMap[this.yAxisName].scale;
             for (var i = 0, len = points.length; i < len; i++) {
@@ -5781,8 +5797,19 @@ var _wpcharts = (function (exports, d3) {
                 var y1 = scaleY(point);
                 var x2 = pointX * this.zoom - left;
                 var y2 = pointY * this.zoom;
-                this.linesComponent.append(new Line({ x1: x1, y1: y1, x2: x2, y2: y2, stroke: legend.color, class: 'line' }));
+                targetComponent.append(new Line({ x1: x1, y1: y1, x2: x2, y2: y2, stroke: legend.color, class: 'line' }));
             }
+        };
+        DistributionBackground.prototype.showMoveLine = function (line) {
+            var legendObject = new Legend({
+                name: 'solid_star',
+                color: 'Red',
+                generator: d3.symbol().type(d3.symbolStar),
+                fill: true
+            });
+            this.drawLineClick(line, this.moveLineComponent, legendObject);
+            if (!this.data.dataYList)
+                this.drawPointClick(line, this.moveLineComponent, legendObject);
         };
         DistributionBackground.clazz = "distribution-background";
         DistributionBackground.title = "带背景分布图";
