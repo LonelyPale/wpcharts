@@ -5816,6 +5816,33 @@ var _wpcharts = (function (exports, d3) {
         return DistributionBackground;
     }(Distribution));
 
+    function bubbleSort(data, fun) {
+        for (var i = data.length; i > 0; i--) {
+            var moveFlag = false;
+            for (var j = 0; j < i - 1; j++) {
+                if (fun) {
+                    if (fun(data[j], data[j + 1])) {
+                        var temp = data[j];
+                        data[j] = data[j + 1];
+                        data[j + 1] = temp;
+                        moveFlag = true;
+                    }
+                }
+                else {
+                    if (data[j] > data[j + 1]) {
+                        var temp = data[j];
+                        data[j] = data[j + 1];
+                        data[j + 1] = temp;
+                        moveFlag = true;
+                    }
+                }
+            }
+            if (!moveFlag)
+                break;
+        }
+        return data;
+    }
+
     var Correlation = (function (_super) {
         __extends(Correlation, _super);
         function Correlation(selector) {
@@ -5833,6 +5860,7 @@ var _wpcharts = (function (exports, d3) {
             _this.state.menuStatus['多项式相关拟合线'] = false;
             _this.state.menuStatus['分年连线'] = false;
             _this.state.menuStatus['包络图'] = false;
+            _this.state.menuStatus['标记数据点'] = true;
             return _this;
         }
         Correlation.prototype.initData = function () {
@@ -5900,33 +5928,11 @@ var _wpcharts = (function (exports, d3) {
             this.drawDottedLine(yAxisModel.tickValues.length - 1, 'horizontal');
         };
         Correlation.prototype.initLegend = function () {
-            var legendManager = this.legendManager;
-            legendManager.add('scatter').drawLegend(this.legendsComponent, '实测值');
         };
         Correlation.prototype.initLines = function () {
         };
         Correlation.prototype.initPoints = function () {
-            var _a = this, modelMap = _a.modelMap, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName, legendManager = _a.legendManager;
-            var data = this.data.scatterDataList;
-            var type = 'scatter';
-            var legend = legendManager.get(type);
-            var scaleX = modelMap[xAxisName].scale;
-            var scaleY = modelMap[yAxisName].scale;
-            for (var i = 0, len = data.length; i < len; i++) {
-                var valueX = data[i].valueX;
-                var valueY = data[i].valueY;
-                var x = scaleX(parseFloat(valueX));
-                var y = scaleY(parseFloat(valueY));
-                this.pointsComponent.append(new Circle({
-                    cx: x,
-                    cy: y,
-                    r: 3,
-                    fill: legend.color,
-                    stroke: 'orange',
-                    "stroke-width": 0,
-                    class: 'point',
-                }));
-            }
+            this.reloadHistory();
         };
         Correlation.prototype.initMenu = function () {
             _super.prototype.initMenu.call(this);
@@ -5941,7 +5947,6 @@ var _wpcharts = (function (exports, d3) {
                     console.log(menuType, !state.menuStatus[menuType]);
                     state.menuStatus[menuType] = !state.menuStatus[menuType];
                     self.reset();
-                    self.reloadHistory();
                 }
             }));
             rootMenu.append(new MenuItem({
@@ -5952,7 +5957,6 @@ var _wpcharts = (function (exports, d3) {
                     console.log(menuType, !state.menuStatus[menuType]);
                     state.menuStatus[menuType] = !state.menuStatus[menuType];
                     self.reset();
-                    self.reloadHistory();
                 }
             }));
             rootMenu.append(new MenuItem({
@@ -5963,7 +5967,6 @@ var _wpcharts = (function (exports, d3) {
                     console.log(menuType, !state.menuStatus[menuType]);
                     state.menuStatus[menuType] = !state.menuStatus[menuType];
                     self.reset();
-                    self.reloadHistory();
                 }
             }));
             rootMenu.append(new MenuItem({
@@ -5974,7 +5977,16 @@ var _wpcharts = (function (exports, d3) {
                     console.log(menuType, !state.menuStatus[menuType]);
                     state.menuStatus[menuType] = !state.menuStatus[menuType];
                     self.reset();
-                    self.reloadHistory();
+                }
+            }));
+            rootMenu.append(new MenuItem({
+                text: '标记数据点',
+                type: this.state.menuStatus['标记数据点'] ? 'check' : 'normal',
+                action: function () {
+                    var menuType = '标记数据点';
+                    console.log(menuType, !state.menuStatus[menuType]);
+                    state.menuStatus[menuType] = !state.menuStatus[menuType];
+                    self.reset();
                 }
             }));
         };
@@ -6029,6 +6041,39 @@ var _wpcharts = (function (exports, d3) {
             }
         };
         Correlation.prototype.drawYearLine = function () {
+            var yearLine = [];
+            var yearLineMap = {};
+            var scatterDataList = this.data.scatterDataList;
+            for (var _i = 0, scatterDataList_1 = scatterDataList; _i < scatterDataList_1.length; _i++) {
+                var item = scatterDataList_1[_i];
+                var keyYear = item.suvDateX.substring(0, 4);
+                if (yearLineMap[keyYear]) {
+                    yearLineMap[keyYear].push(item);
+                }
+                else {
+                    yearLineMap[keyYear] = [item];
+                    yearLine.push([keyYear, yearLineMap[keyYear]]);
+                }
+            }
+            for (var _a = 0, yearLine_1 = yearLine; _a < yearLine_1.length; _a++) {
+                var item = yearLine_1[_a];
+                bubbleSort(item[1], function (a, b) {
+                    return a.suvDateX > b.suvDateX;
+                });
+            }
+            bubbleSort(yearLine, function (a, b) {
+                return a[0] > b[0];
+            });
+            var lastPoint = null;
+            for (var _b = 0, yearLine_2 = yearLine; _b < yearLine_2.length; _b++) {
+                var subarray = yearLine_2[_b];
+                var currentPoints = subarray[1];
+                if (lastPoint) {
+                    currentPoints.unshift(lastPoint);
+                }
+                lastPoint = currentPoints[currentPoints.length - 1];
+                this.drawPath(subarray[1], subarray[0]);
+            }
         };
         Correlation.prototype.drawEnvelopeChart = function () {
             var _a = this, modelMap = _a.modelMap, data = _a.data, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName;
@@ -6061,8 +6106,35 @@ var _wpcharts = (function (exports, d3) {
                 }));
             }
         };
+        Correlation.prototype.drawScatterPoint = function () {
+            var _a = this, modelMap = _a.modelMap, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName, legendManager = _a.legendManager;
+            var data = this.data.scatterDataList;
+            var type = 'scatter';
+            var legend = legendManager.get(type);
+            var scaleX = modelMap[xAxisName].scale;
+            var scaleY = modelMap[yAxisName].scale;
+            for (var i = 0, len = data.length; i < len; i++) {
+                var valueX = data[i].valueX;
+                var valueY = data[i].valueY;
+                var x = scaleX(parseFloat(valueX));
+                var y = scaleY(parseFloat(valueY));
+                this.pointsComponent.append(new Circle({
+                    cx: x,
+                    cy: y,
+                    r: 3,
+                    fill: legend.color,
+                    stroke: 'orange',
+                    "stroke-width": 0,
+                    class: 'point',
+                }));
+            }
+        };
         Correlation.prototype.reloadHistory = function () {
             var menuStatus = this.state.menuStatus;
+            if (menuStatus['标记数据点']) {
+                this.legendManager.add('scatter').drawLegend(this.legendsComponent, '实测值');
+                this.drawScatterPoint();
+            }
             if (menuStatus['直线相关拟合线'])
                 this.drawLinearCorrelationFitLine();
             if (menuStatus['多项式相关拟合线'])
@@ -6071,6 +6143,31 @@ var _wpcharts = (function (exports, d3) {
                 this.drawYearLine();
             if (menuStatus['包络图'])
                 this.drawEnvelopeChart();
+        };
+        Correlation.prototype.drawPath = function (data, legend) {
+            var _a = this, legendManager = _a.legendManager, legendsComponent = _a.legendsComponent, linesComponent = _a.linesComponent, modelMap = _a.modelMap, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName;
+            var scaleX = modelMap[xAxisName].scale;
+            var scaleY = modelMap[yAxisName].scale;
+            var lineGenerator = d3.line()
+                .x(function (d) {
+                return scaleX(parseFloat(d.valueX));
+            })
+                .y(function (d) {
+                return scaleY(parseFloat(d.valueY));
+            });
+            var points = data;
+            var type = legend;
+            legendManager.add(type).drawLegend(legendsComponent, type);
+            var legendObject = legendManager.get(type);
+            if (points && points.length > 0) {
+                linesComponent.append(new Path({
+                    d: lineGenerator(points),
+                    fill: 'none',
+                    stroke: legendObject.color,
+                    'stroke-width': 1,
+                    class: 'line'
+                }));
+            }
         };
         Correlation.clazz = "correlation";
         Correlation.title = "相关图";

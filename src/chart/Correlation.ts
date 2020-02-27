@@ -8,8 +8,7 @@ import {Path} from "../svg/Path";
 import {Circle} from "../svg/Circle";
 import {MenuSeparator} from "../component/menu/MenuSeparator";
 import {MenuItem} from "../component/menu/MenuItem";
-import {GrahamsScan} from "../math/geometry/algorithm/GrahamsScan";
-import {Point} from "../math/geometry/Point";
+import {bubbleSort} from "../util/algorithm/sort/BubbleSort";
 
 export class Correlation extends Chart {
 
@@ -32,10 +31,12 @@ export class Correlation extends Chart {
         };
         this.table = this.db.create(schema);
 
+        //菜单状态
         this.state.menuStatus['直线相关拟合线'] = false;
         this.state.menuStatus['多项式相关拟合线'] = false;
         this.state.menuStatus['分年连线'] = false;
         this.state.menuStatus['包络图'] = false;
+        this.state.menuStatus['标记数据点'] =  true;
     }
 
     protected initData(): void {
@@ -130,41 +131,13 @@ export class Correlation extends Chart {
     }
 
     protected initLegend(): void {
-        let {legendManager} = this;
-        legendManager.add('scatter').drawLegend(this.legendsComponent, '实测值');
     }
 
     protected initLines(): void {
     }
 
     protected initPoints(): void {
-        let {modelMap, xAxisName, yAxisName, legendManager} = this;
-
-        let data = this.data.scatterDataList;
-        let type = 'scatter';
-        let legend = legendManager.get(type);
-
-        let scaleX = modelMap[xAxisName].scale;
-        let scaleY = modelMap[yAxisName].scale;
-
-        for (let i = 0, len = data.length; i < len; i++) {
-            let valueX = data[i].valueX;
-            let valueY = data[i].valueY;
-
-            let x = scaleX(parseFloat(valueX));
-            let y = scaleY(parseFloat(valueY));
-
-            //legend.draw(this.pointsComponent, x, y);
-            this.pointsComponent.append(new Circle({
-                cx: x,//圆心坐标x
-                cy: y,//圆心坐标y
-                r: 3,//半径
-                fill: legend.color,//填充色
-                stroke: 'orange',//圆边色
-                "stroke-width": 0,//圆边厚度
-                class: 'point',
-            }));
-        }
+        this.reloadHistory();
     }
 
     protected initMenu(): void {
@@ -183,7 +156,6 @@ export class Correlation extends Chart {
                 console.log(menuType, !state.menuStatus[menuType]);
                 state.menuStatus[menuType] = !state.menuStatus[menuType];
                 self.reset();
-                self.reloadHistory();
             }
         }));
 
@@ -195,7 +167,6 @@ export class Correlation extends Chart {
                 console.log(menuType, !state.menuStatus[menuType]);
                 state.menuStatus[menuType] = !state.menuStatus[menuType];
                 self.reset();
-                self.reloadHistory();
             }
         }));
 
@@ -207,7 +178,6 @@ export class Correlation extends Chart {
                 console.log(menuType, !state.menuStatus[menuType]);
                 state.menuStatus[menuType] = !state.menuStatus[menuType];
                 self.reset();
-                self.reloadHistory();
             }
         }));
 
@@ -220,7 +190,17 @@ export class Correlation extends Chart {
                 console.log(menuType, !state.menuStatus[menuType]);
                 state.menuStatus[menuType] = !state.menuStatus[menuType];
                 self.reset();
-                self.reloadHistory();
+            }
+        }));
+
+        rootMenu.append(new MenuItem({
+            text: '标记数据点',
+            type: this.state.menuStatus['标记数据点'] ? 'check' : 'normal',
+            action() {
+                let menuType = '标记数据点';
+                console.log(menuType, !state.menuStatus[menuType]);
+                state.menuStatus[menuType] = !state.menuStatus[menuType];
+                self.reset();
             }
         }));
 
@@ -340,6 +320,39 @@ export class Correlation extends Chart {
 
     //分年连线
     drawYearLine() {
+        let yearLine = [];
+        let yearLineMap: {[key:string]: any[]} = {};
+        let scatterDataList = this.data.scatterDataList;
+
+        for(let item of scatterDataList) {
+            let keyYear = item.suvDateX.substring(0, 4);
+            if(yearLineMap[keyYear]) {
+                yearLineMap[keyYear].push(item);
+            } else {
+                yearLineMap[keyYear] = [item];
+                yearLine.push([keyYear, yearLineMap[keyYear]]);
+            }
+        }
+
+        for(let item of yearLine) {
+            bubbleSort(item[1], (a: any, b: any) => {
+                return a.suvDateX > b.suvDateX;
+            });
+        }
+
+        bubbleSort(yearLine, (a: any, b: any) => {
+            return a[0] > b[0];
+        });
+
+        let lastPoint = null;
+        for(let subarray of yearLine) {
+            let currentPoints = subarray[1];
+            if(lastPoint) {
+                currentPoints.unshift(lastPoint);
+            }
+            lastPoint = currentPoints[currentPoints.length - 1];
+            this.drawPath(subarray[1], subarray[0]);
+        }
 
     }
 
@@ -383,12 +396,75 @@ export class Correlation extends Chart {
 
     }
 
+    //标记散点
+    drawScatterPoint() {
+        let {modelMap, xAxisName, yAxisName, legendManager} = this;
+
+        let data = this.data.scatterDataList;
+        let type = 'scatter';
+        let legend = legendManager.get(type);
+
+        let scaleX = modelMap[xAxisName].scale;
+        let scaleY = modelMap[yAxisName].scale;
+
+        for (let i = 0, len = data.length; i < len; i++) {
+            let valueX = data[i].valueX;
+            let valueY = data[i].valueY;
+
+            let x = scaleX(parseFloat(valueX));
+            let y = scaleY(parseFloat(valueY));
+
+            //legend.draw(this.pointsComponent, x, y);
+            this.pointsComponent.append(new Circle({
+                cx: x,//圆心坐标x
+                cy: y,//圆心坐标y
+                r: 3,//半径
+                fill: legend.color,//填充色
+                stroke: 'orange',//圆边色
+                "stroke-width": 0,//圆边厚度
+                class: 'point',
+            }));
+        }
+    }
+
     reloadHistory() {
         let {menuStatus} = this.state;
+        if(menuStatus['标记数据点']) {
+            this.legendManager.add('scatter').drawLegend(this.legendsComponent, '实测值');
+            this.drawScatterPoint();
+        }
         if(menuStatus['直线相关拟合线']) this.drawLinearCorrelationFitLine();
         if(menuStatus['多项式相关拟合线']) this.drawPolynomialCorrelationFitLine();
         if(menuStatus['分年连线']) this.drawYearLine();
         if(menuStatus['包络图']) this.drawEnvelopeChart();
+    }
+
+    drawPath(data: any[], legend: string) {
+        let {legendManager, legendsComponent, linesComponent, modelMap, xAxisName, yAxisName} = this;
+
+        let scaleX = modelMap[xAxisName].scale;
+        let scaleY = modelMap[yAxisName].scale;
+        let lineGenerator = d3.line()
+            .x(function (d: any) {
+                return scaleX(parseFloat(d.valueX));
+            })
+            .y(function (d: any) {
+                return scaleY(parseFloat(d.valueY));
+            });
+
+        let points = data;
+        let type = legend;
+        legendManager.add(type).drawLegend(legendsComponent, type);
+        let legendObject = legendManager.get(type);
+        if (points && points.length > 0) {
+            linesComponent.append(new Path({
+                d: <string>lineGenerator(points),
+                fill: 'none',
+                stroke: legendObject.color,
+                'stroke-width': 1,
+                class: 'line'
+            }));
+        }
     }
 
 }
