@@ -9,6 +9,8 @@ import {Circle} from "../svg/Circle";
 import {MenuSeparator} from "../component/menu/MenuSeparator";
 import {MenuItem} from "../component/menu/MenuItem";
 import {bubbleSort} from "../util/algorithm/sort/BubbleSort";
+import {Legend} from "../component/legend/Legend";
+import {Component} from "../component/Component";
 
 export class Correlation extends Chart {
 
@@ -189,6 +191,7 @@ export class Correlation extends Chart {
                 let menuType = '包络图';
                 console.log(menuType, !state.menuStatus[menuType]);
                 state.menuStatus[menuType] = !state.menuStatus[menuType];
+                state.menuStatus['标记数据点'] = !state.menuStatus[menuType];
                 self.reset();
             }
         }));
@@ -366,25 +369,38 @@ export class Correlation extends Chart {
         let scatterDataList = data.scatterDataList;
         let points: Array<[number, number]> = [];
 
-        for (let i = 0, len = scatterDataList.length; i < len; i++) {
-            let item = scatterDataList[i];
+        let historyData = [];
+        let currentYearData = [];
+        let inCurrentYearData = [];
+        let outCurrentYearData = [];
+        let year = new Date().getFullYear().toString();
+
+        for(let item of scatterDataList) {
+            let keyYear = item.suvDateX.substring(0, 4);
+            if(keyYear === year) {
+                currentYearData.push(item);
+            } else {
+                historyData.push(item);
+            }
+        }
+
+        for (let i = 0, len = historyData.length; i < len; i++) {
+            let item = historyData[i];
             let valueX = scaleX(parseFloat(item.valueX));
             let valueY = scaleY(parseFloat(item.valueY));
             points.push([valueX, valueY]);
         }
 
         let pointsConvexHull: Array<[number, number]> | null = d3.polygonHull(points);
-
-        let lineGenerator = d3.line()
-            .x(function (d: [number, number]) {
-                return (d[0]);
-            })
-            .y(function (d: [number, number]) {
-                return (d[1]);
-            });
-
         if (pointsConvexHull && pointsConvexHull.length > 0) {
             let color = '#FF9966';// #FFFF00 #FF9966 #FF9999
+            let lineGenerator = d3.line()
+                .x(function (d: [number, number]) {
+                    return (d[0]);
+                })
+                .y(function (d: [number, number]) {
+                    return (d[1]);
+                });
             this.pointsComponent.append(new Path({
                 d: <string>lineGenerator(pointsConvexHull),
                 fill: color,
@@ -392,8 +408,40 @@ export class Correlation extends Chart {
                 'stroke-width': 1,
                 'fill-opacity': 0.5,
             }));
+
+            for(let item of currentYearData) {
+                let flag = d3.polygonContains(pointsConvexHull, [scaleX(parseFloat(item.valueX)), scaleY(parseFloat(item.valueY))]);
+                if(flag) {
+                    inCurrentYearData.push(item);
+                } else {
+                    outCurrentYearData.push(item);
+                }
+            }
         }
 
+        let historyLegendObject = new Legend({
+            name: 'solid_circle',
+            color: '#C0C0C0',
+            generator: d3.symbol().type(d3.symbolCircle),
+            fill: true
+        });
+        this.drawPoint(historyData, historyLegendObject);
+
+        let inCurrentLegendObject = new Legend({
+            name: 'solid_circle',
+            color: 'red',
+            generator: d3.symbol().type(d3.symbolCircle),
+            fill: true
+        });
+        this.drawPoint(inCurrentYearData, inCurrentLegendObject);
+
+        let outCurrentLegendObject = new Legend({
+            name: 'solid_star',
+            color: 'red',
+            generator: d3.symbol().type(d3.symbolStar),
+            fill: true
+        });
+        this.drawPoint(outCurrentYearData, outCurrentLegendObject);
     }
 
     //标记散点
@@ -465,6 +513,36 @@ export class Correlation extends Chart {
                 class: 'line'
             }));
         }
+    }
+
+    drawPoint(data: any[], legendObject: Legend) {
+        let {modelMap, xAxisName, yAxisName} = this;
+
+        let scaleX = modelMap[xAxisName].scale;
+        let scaleY = modelMap[yAxisName].scale;
+
+        for (let i = 0, len = data.length; i < len; i++) {
+            let valueX = data[i].valueX;
+            let valueY = data[i].valueY;
+
+            let x = scaleX(parseFloat(valueX));
+            let y = scaleY(parseFloat(valueY));
+
+            if(legendObject.name.indexOf('circle') > -1) {
+                this.pointsComponent.append(new Circle({
+                    cx: x,//圆心坐标x
+                    cy: y,//圆心坐标y
+                    r: 3,//半径
+                    fill: legendObject.color,//填充色
+                    stroke: 'orange',//圆边色
+                    "stroke-width": 0,//圆边厚度
+                    class: 'point',
+                }));
+            } else {
+                legendObject.draw(this.pointsComponent, x, y, 30);
+            }
+        }
+
     }
 
 }

@@ -5976,6 +5976,7 @@ var _wpcharts = (function (exports, d3) {
                     var menuType = '包络图';
                     console.log(menuType, !state.menuStatus[menuType]);
                     state.menuStatus[menuType] = !state.menuStatus[menuType];
+                    state.menuStatus['标记数据点'] = !state.menuStatus[menuType];
                     self.reset();
                 }
             }));
@@ -6081,22 +6082,37 @@ var _wpcharts = (function (exports, d3) {
             var scaleY = modelMap[yAxisName].scale;
             var scatterDataList = data.scatterDataList;
             var points = [];
-            for (var i = 0, len = scatterDataList.length; i < len; i++) {
-                var item = scatterDataList[i];
+            var historyData = [];
+            var currentYearData = [];
+            var inCurrentYearData = [];
+            var outCurrentYearData = [];
+            var year = new Date().getFullYear().toString();
+            for (var _i = 0, scatterDataList_2 = scatterDataList; _i < scatterDataList_2.length; _i++) {
+                var item = scatterDataList_2[_i];
+                var keyYear = item.suvDateX.substring(0, 4);
+                if (keyYear === year) {
+                    currentYearData.push(item);
+                }
+                else {
+                    historyData.push(item);
+                }
+            }
+            for (var i = 0, len = historyData.length; i < len; i++) {
+                var item = historyData[i];
                 var valueX = scaleX(parseFloat(item.valueX));
                 var valueY = scaleY(parseFloat(item.valueY));
                 points.push([valueX, valueY]);
             }
             var pointsConvexHull = d3.polygonHull(points);
-            var lineGenerator = d3.line()
-                .x(function (d) {
-                return (d[0]);
-            })
-                .y(function (d) {
-                return (d[1]);
-            });
             if (pointsConvexHull && pointsConvexHull.length > 0) {
                 var color = '#FF9966';
+                var lineGenerator = d3.line()
+                    .x(function (d) {
+                    return (d[0]);
+                })
+                    .y(function (d) {
+                    return (d[1]);
+                });
                 this.pointsComponent.append(new Path({
                     d: lineGenerator(pointsConvexHull),
                     fill: color,
@@ -6104,7 +6120,38 @@ var _wpcharts = (function (exports, d3) {
                     'stroke-width': 1,
                     'fill-opacity': 0.5,
                 }));
+                for (var _b = 0, currentYearData_1 = currentYearData; _b < currentYearData_1.length; _b++) {
+                    var item = currentYearData_1[_b];
+                    var flag = d3.polygonContains(pointsConvexHull, [scaleX(parseFloat(item.valueX)), scaleY(parseFloat(item.valueY))]);
+                    if (flag) {
+                        inCurrentYearData.push(item);
+                    }
+                    else {
+                        outCurrentYearData.push(item);
+                    }
+                }
             }
+            var historyLegendObject = new Legend({
+                name: 'solid_circle',
+                color: '#C0C0C0',
+                generator: d3.symbol().type(d3.symbolCircle),
+                fill: true
+            });
+            this.drawPoint(historyData, historyLegendObject);
+            var inCurrentLegendObject = new Legend({
+                name: 'solid_circle',
+                color: 'red',
+                generator: d3.symbol().type(d3.symbolCircle),
+                fill: true
+            });
+            this.drawPoint(inCurrentYearData, inCurrentLegendObject);
+            var outCurrentLegendObject = new Legend({
+                name: 'solid_star',
+                color: 'red',
+                generator: d3.symbol().type(d3.symbolStar),
+                fill: true
+            });
+            this.drawPoint(outCurrentYearData, outCurrentLegendObject);
         };
         Correlation.prototype.drawScatterPoint = function () {
             var _a = this, modelMap = _a.modelMap, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName, legendManager = _a.legendManager;
@@ -6167,6 +6214,31 @@ var _wpcharts = (function (exports, d3) {
                     'stroke-width': 1,
                     class: 'line'
                 }));
+            }
+        };
+        Correlation.prototype.drawPoint = function (data, legendObject) {
+            var _a = this, modelMap = _a.modelMap, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName;
+            var scaleX = modelMap[xAxisName].scale;
+            var scaleY = modelMap[yAxisName].scale;
+            for (var i = 0, len = data.length; i < len; i++) {
+                var valueX = data[i].valueX;
+                var valueY = data[i].valueY;
+                var x = scaleX(parseFloat(valueX));
+                var y = scaleY(parseFloat(valueY));
+                if (legendObject.name.indexOf('circle') > -1) {
+                    this.pointsComponent.append(new Circle({
+                        cx: x,
+                        cy: y,
+                        r: 3,
+                        fill: legendObject.color,
+                        stroke: 'orange',
+                        "stroke-width": 0,
+                        class: 'point',
+                    }));
+                }
+                else {
+                    legendObject.draw(this.pointsComponent, x, y, 30);
+                }
             }
         };
         Correlation.clazz = "correlation";
