@@ -5145,7 +5145,6 @@ var _wpcharts = (function (exports, d3) {
             return _this;
         }
         Distribution.prototype.initData = function () {
-            console.log(123);
             this.clear();
             var _a = this, data = _a.option.data, table = _a.table;
             this.data = clone(data && data.pointCategories ? data : data.object);
@@ -5864,6 +5863,10 @@ var _wpcharts = (function (exports, d3) {
             return _this;
         }
         Correlation.prototype.initData = function () {
+            this.option.view.width = 900;
+            this.option.view.height = 700;
+            this.option.view.left = 200;
+            this.option.view.right = 200;
             var _a = this, action = _a.action, table = _a.table, modelMap = _a.modelMap, lineMap = _a.lineMap, legendManager = _a.legendManager, data = _a.option.data;
             this.data = clone(data && data.designcode ? data : data.object);
             var usedData = this.data;

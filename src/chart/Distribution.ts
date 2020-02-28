@@ -58,7 +58,7 @@ export class Distribution extends Chart {
         this.table = this.db.create(schema);
     }
 
-    protected initData(): void {console.log(123);
+    protected initData(): void {
         this.clear();
 
         let {option: {data}, table} = this;

@@ -42,6 +42,11 @@ export class Correlation extends Chart {
     }
 
     protected initData(): void {
+        this.option.view.width = 900;
+        this.option.view.height = 700;
+        this.option.view.left = 200;
+        this.option.view.right = 200;
+
         let {action, table, modelMap, lineMap, legendManager, option: {data}} = this;
 
         this.data = clone(data && data.designcode ? data : data.object);
