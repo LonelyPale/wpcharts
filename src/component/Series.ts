@@ -151,7 +151,7 @@ export class Series extends Component {
     }
 
     public initLines(): void {
-        let {lineMap, table} = this;
+        let {lineMap, table, legendsComponent} = this;
 
         for (let line of Object.values(lineMap)) {
             let {data, legendObject, xModel: {scale: xScale}, yModel: {scale: yScale}} = line;
@@ -172,6 +172,9 @@ export class Series extends Component {
             })(yScale);
 
             this.linesComponent.append(new Path({d: <string>lineGenerator(data), stroke: legendObject.color, class: 'line'}));
+
+            //统计模型过程线: 使用单独的图例和颜色, 没有使用通用图例
+            legendObject.drawLegend(legendsComponent, line.legend);
         }
 
     }

@@ -4501,7 +4501,6 @@ var _wpcharts = (function (exports, d3) {
                     model.range = [0, width];
                 }
                 else {
-                    console.log(123, model.name, model);
                     if (((_b = (_a = model) === null || _a === void 0 ? void 0 : _a.name) === null || _b === void 0 ? void 0 : _b.indexOf('降雨')) > -1) {
                         table.insert([null, model.name, null, null, 0]);
                     }
@@ -4859,7 +4858,7 @@ var _wpcharts = (function (exports, d3) {
             return this;
         };
         Series.prototype.initLines = function () {
-            var _a = this, lineMap = _a.lineMap, table = _a.table;
+            var _a = this, lineMap = _a.lineMap, table = _a.table, legendsComponent = _a.legendsComponent;
             var _loop_1 = function (line) {
                 var data = line.data, legendObject = line.legendObject, xScale = line.xModel.scale, yScale = line.yModel.scale;
                 var lineGenerator = null;
@@ -4875,6 +4874,7 @@ var _wpcharts = (function (exports, d3) {
                     });
                 })(yScale);
                 this_1.linesComponent.append(new Path({ d: lineGenerator(data), stroke: legendObject.color, class: 'line' }));
+                legendObject.drawLegend(legendsComponent, line.legend);
             };
             var this_1 = this;
             for (var _i = 0, _b = Object.values(lineMap); _i < _b.length; _i++) {
@@ -4919,12 +4919,50 @@ var _wpcharts = (function (exports, d3) {
         return Series;
     }(Component));
 
+    var LegendIndexNode = (function () {
+        function LegendIndexNode(index, legend) {
+            this.index = [];
+            this.index = __spreadArrays(index);
+            this.legend = legend;
+        }
+        LegendIndexNode.prototype.get = function (key) {
+            if (this.index.indexOf(key) > -1) {
+                return this.legend;
+            }
+            else {
+                return null;
+            }
+        };
+        return LegendIndexNode;
+    }());
+    var LegendIndex = (function () {
+        function LegendIndex(index) {
+            this.index = [];
+            if (index)
+                this.index = __spreadArrays(index);
+        }
+        LegendIndex.prototype.add = function (node) {
+            this.index.push(node);
+        };
+        LegendIndex.prototype.get = function (key) {
+            for (var _i = 0, _a = this.index; _i < _a.length; _i++) {
+                var node = _a[_i];
+                var legend = node.get(key);
+                if (legend)
+                    return legend;
+            }
+            return null;
+        };
+        return LegendIndex;
+    }());
+
     var Statistical = (function (_super) {
         __extends(Statistical, _super);
         function Statistical(selector) {
             var _this = _super.call(this, selector) || this;
             _this.pointId = '';
             _this.unit = '';
+            _this.legendIndex = new LegendIndex();
             var schema = {
                 name: Statistical.clazz,
                 properties: {
@@ -4935,10 +4973,34 @@ var _wpcharts = (function (exports, d3) {
                 }
             };
             _this.table = _this.db.create(schema);
+            _this.legendIndex.add(new LegendIndexNode(['实测值', '残差', '水位分量'], new Legend({
+                name: 'solid_circle',
+                color: 'Blue',
+                generator: d3.symbol().type(d3.symbolCircle),
+                fill: true
+            })));
+            _this.legendIndex.add(new LegendIndexNode(['计算值', '温度分量'], new Legend({
+                name: 'hollow_circle',
+                color: 'Red',
+                generator: d3.symbol().type(d3.symbolCircle),
+                fill: false
+            })));
+            _this.legendIndex.add(new LegendIndexNode(['降雨分量'], new Legend({
+                name: 'solid_rect',
+                color: 'Green',
+                generator: d3.symbol().type(d3.symbolSquare),
+                fill: true
+            })));
+            _this.legendIndex.add(new LegendIndexNode(['时效分量'], new Legend({
+                name: 'hollow_rect',
+                color: 'Black',
+                generator: d3.symbol().type(d3.symbolSquare),
+                fill: false
+            })));
             return _this;
         }
         Statistical.prototype.initData = function () {
-            var _a = this, seriesMap = _a.seriesMap, table = _a.table, modelMap = _a.modelMap, lineMap = _a.lineMap, legendManager = _a.legendManager, data = _a.option.data;
+            var _a = this, seriesMap = _a.seriesMap, table = _a.table, data = _a.option.data;
             this.option.view.height = 750;
             this.option.view.top = 60;
             this.option.view.bottom = 60;
@@ -5007,7 +5069,7 @@ var _wpcharts = (function (exports, d3) {
                 for (var j = 0; j < legends.length; j++) {
                     var legendName = legends[j];
                     var data = table.select("PlotId='" + i + "' and Legend='" + legendName + "'");
-                    var legend = series.legendManager.add(legendName);
+                    var legend = this.legendIndex.get(legendName) || series.legendManager.add(legendName);
                     var lineObject = new LineObject(pointId, unit, legendName);
                     lineObject.data = data;
                     lineObject.table = table;
@@ -5037,11 +5099,6 @@ var _wpcharts = (function (exports, d3) {
             }
         };
         Statistical.prototype.initLegend = function () {
-            var seriesMap = this.seriesMap;
-            var seriesArray = Object.values(seriesMap);
-            for (var i = 0; i < seriesArray.length; i++) {
-                seriesArray[i].initLegend();
-            }
         };
         Statistical.prototype.initLines = function () {
             var seriesMap = this.seriesMap;

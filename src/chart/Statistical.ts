@@ -7,6 +7,9 @@ import {Series} from "../component/Series";
 import {TimeAxis} from "../component/axis/TimeAxis";
 import {TimeFieldName, TimeModelName} from "../constant";
 import {LineObject} from "../object/LineObject";
+import {Legend} from "../component/legend/Legend";
+import d3 from "d3";
+import {LegendIndex, LegendIndexNode} from "../component/legend/LegendIndex";
 
 export class Statistical extends Chart {
 
@@ -15,6 +18,8 @@ export class Statistical extends Chart {
 
     pointId: string = '';
     unit: string = '';
+
+    legendIndex: LegendIndex = new LegendIndex();//统计模型过程线: 使用单独的图例和颜色
 
     constructor(selector: string) {
         super(selector);
@@ -29,10 +34,35 @@ export class Statistical extends Chart {
             }
         };
         this.table = this.db.create(schema);
+
+        this.legendIndex.add(new LegendIndexNode(['实测值', '残差', '水位分量'], new Legend({
+            name: 'solid_circle',
+            color: 'Blue',
+            generator: d3.symbol().type(d3.symbolCircle),
+            fill: true
+        })));
+        this.legendIndex.add(new LegendIndexNode(['计算值', '温度分量'], new Legend({
+            name: 'hollow_circle',
+            color: 'Red',
+            generator: d3.symbol().type(d3.symbolCircle),
+            fill: false
+        })));
+        this.legendIndex.add(new LegendIndexNode(['降雨分量'], new Legend({
+            name: 'solid_rect',
+            color: 'Green',
+            generator: d3.symbol().type(d3.symbolSquare),
+            fill: true
+        })));
+        this.legendIndex.add(new LegendIndexNode(['时效分量'], new Legend({
+            name: 'hollow_rect',
+            color: 'Black',
+            generator: d3.symbol().type(d3.symbolSquare),
+            fill: false
+        })));
     }
 
     protected initData(): void {
-        let {seriesMap, table, modelMap, lineMap, legendManager, option: {data}} = this;
+        let {seriesMap, table, option: {data}} = this;
 
         this.option.view.height = 750;
         this.option.view.top = 60;
@@ -127,8 +157,8 @@ export class Statistical extends Chart {
             for (let j = 0; j < legends.length; j++) {
                 let legendName = legends[j];
                 let data = table.select(`PlotId='${i}' and Legend='${legendName}'`);
-                let legend = series.legendManager.add(legendName);
-                //series.lineMap[legendName] = {data, model, legend};//last
+                let legend = this.legendIndex.get(legendName) || series.legendManager.add(legendName);//新图例和颜色
+                //series.lineMap[legendName] = {data, model, legend}; //last line
                 let lineObject = new LineObject(pointId, unit, legendName);//#初始化线
                 lineObject.data = data;
                 lineObject.table = table;
@@ -163,11 +193,14 @@ export class Statistical extends Chart {
     }
 
     protected initLegend(): void {
+        /*
+        //统计模型过程线: 使用单独的图例和颜色, 没有使用通用图例
         let {seriesMap} = this;
         let seriesArray = Object.values(seriesMap);
         for (let i = 0; i < seriesArray.length; i++) {
             seriesArray[i].initLegend();
         }
+        */
     }
 
     protected initLines(): void {
