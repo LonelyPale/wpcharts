@@ -4827,23 +4827,22 @@ var _wpcharts = (function (exports, d3) {
             return this;
         };
         Series.prototype.initLines = function () {
-            var _a = this, lineMap = _a.lineMap, modelMap = _a.modelMap, table = _a.table;
-            var scaleX = modelMap.time.scale;
+            var _a = this, lineMap = _a.lineMap, table = _a.table;
             var _loop_1 = function (line) {
-                var data = line.data, scaleY = line.model.scale, legend = line.legend;
+                var data = line.data, legendObject = line.legendObject, xScale = line.xModel.scale, yScale = line.yModel.scale;
                 var lineGenerator = null;
                 if (data.length === 0)
                     return "continue";
-                (function (scaleY) {
+                (function (yScale) {
                     lineGenerator = d3.line()
                         .x(function (d, index, data) {
-                        return scaleX(table.field('SuvDate', d));
+                        return xScale(table.field('SuvDate', d));
                     })
                         .y(function (d, index, data) {
-                        return scaleY(table.field('Val', d));
+                        return yScale(table.field('Val', d));
                     });
-                })(scaleY);
-                this_1.linesComponent.append(new Path({ d: lineGenerator(data), stroke: legend.color, class: 'line' }));
+                })(yScale);
+                this_1.linesComponent.append(new Path({ d: lineGenerator(data), stroke: legendObject.color, class: 'line' }));
             };
             var this_1 = this;
             for (var _i = 0, _b = Object.values(lineMap); _i < _b.length; _i++) {
@@ -4853,19 +4852,18 @@ var _wpcharts = (function (exports, d3) {
         };
         Series.prototype.initPoints = function () {
             var _a = this, lineMap = _a.lineMap, modelMap = _a.modelMap, table = _a.table;
-            var scaleX = modelMap.time.scale;
             for (var _i = 0, _b = Object.values(lineMap); _i < _b.length; _i++) {
                 var line = _b[_i];
-                var data = line.data, scaleY = line.model.scale, legend = line.legend;
+                var data = line.data, legendObject = line.legendObject, xScale = line.xModel.scale, yScale = line.yModel.scale;
                 var pointsLength = data.length;
                 var pointsSpace = Math.floor(data.length / 10);
                 var point = void 0, j = void 0, x = void 0, y = void 0;
                 if (pointsLength <= 12) {
                     for (j = 0; j < pointsLength; j++) {
                         point = data[j];
-                        x = scaleX(table.field('SuvDate', point));
-                        y = scaleY(table.field('Val', point));
-                        legend.draw(this.pointsComponent, x, y);
+                        x = xScale(table.field('SuvDate', point));
+                        y = yScale(table.field('Val', point));
+                        legendObject.draw(this.pointsComponent, x, y);
                     }
                 }
                 else {
@@ -4876,12 +4874,12 @@ var _wpcharts = (function (exports, d3) {
                         else {
                             point = data[j * pointsSpace];
                         }
-                        x = scaleX(table.field('SuvDate', point));
-                        y = scaleY(table.field('Val', point));
-                        legend.draw(this.pointsComponent, x, y);
+                        x = xScale(table.field('SuvDate', point));
+                        y = yScale(table.field('Val', point));
+                        legendObject.draw(this.pointsComponent, x, y);
                     }
-                    legend.draw(this.pointsComponent, scaleX(table.field('SuvDate', data[0])), scaleY(table.field('Val', data[0])));
-                    legend.draw(this.pointsComponent, scaleX(table.field('SuvDate', data[pointsLength - 1])), scaleY(table.field('Val', data[pointsLength - 1])));
+                    legendObject.draw(this.pointsComponent, xScale(table.field('SuvDate', data[0])), yScale(table.field('Val', data[0])));
+                    legendObject.draw(this.pointsComponent, xScale(table.field('SuvDate', data[pointsLength - 1])), yScale(table.field('Val', data[pointsLength - 1])));
                 }
             }
         };
@@ -4945,7 +4943,7 @@ var _wpcharts = (function (exports, d3) {
             this.tableBackup = table.copy(Statistical.clazz + '-backup');
         };
         Statistical.prototype.initModel = function () {
-            var _a = this, table = _a.table, modelMap = _a.modelMap, seriesMap = _a.seriesMap, unit = _a.unit, gridComponent = _a.gridComponent;
+            var _a = this, table = _a.table, modelMap = _a.modelMap, seriesMap = _a.seriesMap, pointId = _a.pointId, unit = _a.unit, gridComponent = _a.gridComponent;
             var _b = this.gridComponent.getView(), width = _b.width, height = _b.height;
             var _c = this.option.view, w = _c.width, h = _c.height, t = _c.top, b = _c.bottom, l = _c.left, r = _c.right;
             var sw = w - l - r;
@@ -4978,7 +4976,13 @@ var _wpcharts = (function (exports, d3) {
                     var legendName = legends[j];
                     var data = table.select("PlotId='" + i + "' and Legend='" + legendName + "'");
                     var legend = series.legendManager.add(legendName);
-                    series.lineMap[legendName] = { data: data, model: model, legend: legend };
+                    var lineObject = new LineObject(pointId, unit, legendName);
+                    lineObject.data = data;
+                    lineObject.table = table;
+                    lineObject.legendObject = legend;
+                    lineObject.xModel = modelMap[TimeModelName];
+                    lineObject.yModel = modelMap[i];
+                    series.lineMap[legendName] = lineObject;
                 }
             }
         };

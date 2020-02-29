@@ -10,6 +10,7 @@ import {Rect} from "../svg/Rect";
 import d3 from "d3";
 import {Path} from "../svg/Path";
 import {Table} from "../rdb/Table";
+import {LineObject} from "../object/LineObject";
 
 export interface SeriesProperty extends ComponentProperty {
     table: Table;
@@ -36,7 +37,8 @@ export class Series extends Component {
 
     cache: { [key: string]: any } = {};
     modelMap: { [key: string]: Model<number | string | Date> } = {};
-    lineMap: { [key: string]: any } = {};
+    //lineMap: { [key: string]: any } = {};
+    lineMap: { [key: string]: LineObject } = {}; //线
     legendManager: LegendManager = new LegendManager();
 
     constructor(property: SeriesProperty) {
@@ -149,38 +151,36 @@ export class Series extends Component {
     }
 
     public initLines(): void {
-        let {lineMap, modelMap, table} = this;
-        let {time: {scale: scaleX}} = modelMap;
+        let {lineMap, table} = this;
 
         for (let line of Object.values(lineMap)) {
-            let {data, model: {scale: scaleY}, legend} = line;
+            let {data, legendObject, xModel: {scale: xScale}, yModel: {scale: yScale}} = line;
             let lineGenerator = null;
 
             if (data.length === 0) continue;//跳过没有数据的线
 
             //用闭包保存住当前循环的i的值。
-            (function (scaleY) {
+            (function (yScale) {
                 lineGenerator = d3.line()
                     .x(function (d: any, index: number, data: any[]) {
                         //console.log(d, index, data);
-                        return scaleX(table.field('SuvDate', d));
+                        return xScale(table.field('SuvDate', d));
                     })
                     .y(function (d: any, index: number, data: any[]) {
-                        return scaleY(table.field('Val', d));
+                        return yScale(table.field('Val', d));
                     });
-            })(scaleY);
+            })(yScale);
 
-            this.linesComponent.append(new Path({d: <string>lineGenerator(data), stroke: legend.color, class: 'line'}));
+            this.linesComponent.append(new Path({d: <string>lineGenerator(data), stroke: legendObject.color, class: 'line'}));
         }
 
     }
 
     public initPoints(): void {
         let {lineMap, modelMap, table} = this;
-        let {time: {scale: scaleX}} = modelMap;
 
         for (let line of Object.values(lineMap)) {
-            let {data, model: {scale: scaleY}, legend} = line;
+            let {data, legendObject, xModel: {scale: xScale}, yModel: {scale: yScale}} = line;
 
             let pointsLength = data.length;
             let pointsSpace = Math.floor(data.length / 10);
@@ -189,9 +189,9 @@ export class Series extends Component {
                 //显示所有的点
                 for (j = 0; j < pointsLength; j++) {
                     point = data[j];
-                    x = scaleX(table.field('SuvDate', point));
-                    y = scaleY(table.field('Val', point));
-                    legend.draw(this.pointsComponent, x, y);
+                    x = xScale(table.field('SuvDate', point));
+                    y = yScale(table.field('Val', point));
+                    legendObject.draw(this.pointsComponent, x, y);
                 }
             } else {
                 //显示最多12个点
@@ -202,12 +202,12 @@ export class Series extends Component {
                     } else {
                         point = data[j * pointsSpace];
                     }
-                    x = scaleX(table.field('SuvDate', point));
-                    y = scaleY(table.field('Val', point));
-                    legend.draw(this.pointsComponent, x, y);
+                    x = xScale(table.field('SuvDate', point));
+                    y = yScale(table.field('Val', point));
+                    legendObject.draw(this.pointsComponent, x, y);
                 }
-                legend.draw(this.pointsComponent, scaleX(table.field('SuvDate', data[0])), scaleY(table.field('Val', data[0])));//第一个点
-                legend.draw(this.pointsComponent, scaleX(table.field('SuvDate', data[pointsLength - 1])), scaleY(table.field('Val', data[pointsLength - 1])));//最后一个点
+                legendObject.draw(this.pointsComponent, xScale(table.field('SuvDate', data[0])), yScale(table.field('Val', data[0])));//第一个点
+                legendObject.draw(this.pointsComponent, xScale(table.field('SuvDate', data[pointsLength - 1])), yScale(table.field('Val', data[pointsLength - 1])));//最后一个点
             }
         }
 

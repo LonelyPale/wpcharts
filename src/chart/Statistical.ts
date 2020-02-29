@@ -6,6 +6,7 @@ import {LinearModel} from "../model/LinearModel";
 import {Series} from "../component/Series";
 import {TimeAxis} from "../component/axis/TimeAxis";
 import {TimeFieldName, TimeModelName} from "../constant";
+import {LineObject} from "../object/LineObject";
 
 export class Statistical extends Chart {
 
@@ -84,7 +85,7 @@ export class Statistical extends Chart {
     }
 
     protected initModel(): void {
-        let {table, modelMap, seriesMap, unit, gridComponent} = this;
+        let {table, modelMap, seriesMap, pointId, unit, gridComponent} = this;
         let {width, height} = this.gridComponent.getView();
         let {width: w, height: h, top: t, bottom: b, left: l, right: r} = this.option.view;
 
@@ -127,7 +128,14 @@ export class Statistical extends Chart {
                 let legendName = legends[j];
                 let data = table.select(`PlotId='${i}' and Legend='${legendName}'`);
                 let legend = series.legendManager.add(legendName);
-                series.lineMap[legendName] = {data, model, legend};
+                //series.lineMap[legendName] = {data, model, legend};//last
+                let lineObject = new LineObject(pointId, unit, legendName);//#初始化线
+                lineObject.data = data;
+                lineObject.table = table;
+                lineObject.legendObject = legend;
+                lineObject.xModel = modelMap[TimeModelName];
+                lineObject.yModel = modelMap[i];
+                series.lineMap[legendName] = lineObject;
             }
         }
 
