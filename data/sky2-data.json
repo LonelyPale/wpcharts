@@ -10,8 +10,8 @@
   "ObservLineList": [
     {
       "PointId": "J6-1-1",
-      "Unit": "温度℃",
-      "Legend": "J6-1-1",
+      "Unit": "降雨_温度℃",
+      "Legend": "降雨_J6-1-1",
       "ObservPointList": [
         {
           "Type": "artificial-人工-X 现在不用了 X",

@@ -92,7 +92,6 @@ export class Hydrograph extends Chart {
                 let suvDate = <Date>parseTime(point.SuvDate);
                 let row = table.insert([pointId, unit, legend, suvDate, value]); //#保存处理后的数据
             }
-
         }
 
         this.title = this.data.Title || this.title;
@@ -164,6 +163,11 @@ export class Hydrograph extends Chart {
                 model.data = table.columns(TimeFieldName);
                 model.range = [0, width];
             } else {
+                //#特殊处理: 当 物理量 是 降雨量时, 存入柱状图必须的最小值 0 (降雨量最小值永远是0)
+                if(model?.name?.indexOf('降雨') > -1) {
+                    table.insert([null, model.name, null, null, 0]);
+                }
+
                 let rowData = table.select(`Unit='${model.name}'`);
                 model.data = table.columns('Value', rowData, (value: number) => value !== -99);//处理无效值
                 //model.range = reverseAxis ? [0, height] : [height, 0];
@@ -237,14 +241,22 @@ export class Hydrograph extends Chart {
     protected initLines(): void {
         let {lineMap, linesComponent} = this;
         for (let line of Object.values(lineMap)) {
-           line.drawLine(linesComponent);
+            //#特殊处理: 当 物理量 是 降雨量时, 画柱状图, 不标注点
+            if(line.unit.indexOf('降雨') > -1) {
+                line.drawHistogram(linesComponent);
+            } else {
+                line.drawLine(linesComponent);
+            }
         }
     }
 
     protected initPoints(): void {
         let {lineMap, pointsComponent} = this;
         for (let line of Object.values(lineMap)) {
-            line.drawPoint(pointsComponent);
+            //#特殊处理: 当 物理量 是 降雨量时, 画柱状图, 不标注点, 不是物理量时要标注点
+            if(line.unit.indexOf('降雨') === -1) {
+                line.drawPoint(pointsComponent);
+            }
         }
     }
 

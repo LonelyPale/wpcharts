@@ -4,6 +4,7 @@ import {Component} from "../component/Component";
 import d3 from "d3";
 import {Table} from "../rdb/Table";
 import {Path} from "../svg/Path";
+import {Line} from "../svg/Line";
 
 export type LineObjectTag = 'pointId' | 'unit' | 'legend';
 
@@ -97,6 +98,29 @@ export class LineObject {
             }
             legendObject.draw(component, xScale(table.field(xFieldName, data[0])), yScale(table.field(yFieldName, data[0])));//第一个点
             legendObject.draw(component, xScale(table.field(xFieldName, data[pointsLength - 1])), yScale(table.field(yFieldName, data[pointsLength - 1])));//最后一个点
+        }
+    }
+
+    drawHistogram(component: Component, newLegendObject?: Legend) {
+        let {table, xModel, yModel, data, legendObject} = this;
+        let {fieldName: xFieldName, scale: xScale} = xModel;
+        let {fieldName: yFieldName, scale: yScale} = yModel;
+
+        if (!data || data.length === 0) return;//跳过没有数据的线
+
+        legendObject = newLegendObject || legendObject;
+
+        let yStart = yScale(0);
+        for(let point of data) {
+            let xValue = table.field(xFieldName, point);
+            let yValue = table.field(yFieldName, point);
+
+            if(yValue <= 0) continue;//跳过小于0的点
+
+            let x = xScale(xValue);
+            let y = yScale(yValue);
+            let line = new Line({x1: x, y1: yStart, x2: x, y2: y, stroke: legendObject.color, 'stroke-width': 1, class: 'line'});
+            component.append(line);
         }
     }
 

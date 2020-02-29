@@ -4315,6 +4315,26 @@ var _wpcharts = (function (exports, d3) {
                 legendObject.draw(component, xScale(table.field(xFieldName, data[pointsLength - 1])), yScale(table.field(yFieldName, data[pointsLength - 1])));
             }
         };
+        LineObject.prototype.drawHistogram = function (component, newLegendObject) {
+            var _a = this, table = _a.table, xModel = _a.xModel, yModel = _a.yModel, data = _a.data, legendObject = _a.legendObject;
+            var xFieldName = xModel.fieldName, xScale = xModel.scale;
+            var yFieldName = yModel.fieldName, yScale = yModel.scale;
+            if (!data || data.length === 0)
+                return;
+            legendObject = newLegendObject || legendObject;
+            var yStart = yScale(0);
+            for (var _i = 0, data_1 = data; _i < data_1.length; _i++) {
+                var point = data_1[_i];
+                var xValue = table.field(xFieldName, point);
+                var yValue = table.field(yFieldName, point);
+                if (yValue <= 0)
+                    continue;
+                var x = xScale(xValue);
+                var y = yScale(yValue);
+                var line = new Line({ x1: x, y1: yStart, x2: x, y2: y, stroke: legendObject.color, 'stroke-width': 1, class: 'line' });
+                component.append(line);
+            }
+        };
         LineObject.prototype.generateLegendName = function (tags) {
             var map = {};
             var arr = [];
@@ -4425,8 +4445,9 @@ var _wpcharts = (function (exports, d3) {
             this.tableBackup = table.copy(Hydrograph.clazz + '-backup');
         };
         Hydrograph.prototype.initModel = function () {
-            var _a = this.gridComponent.getView(), width = _a.width, height = _a.height;
-            var _b = this, action = _b.action, table = _b.table, pointIdMap = _b.pointIdMap, modelMap = _b.modelMap, lineMap = _b.lineMap, cache = _b.cache, legendManager = _b.legendManager, reverseAxis = _b.reverseAxis, initReverse = _b.initReverse;
+            var _a, _b;
+            var _c = this.gridComponent.getView(), width = _c.width, height = _c.height;
+            var _d = this, action = _d.action, table = _d.table, pointIdMap = _d.pointIdMap, modelMap = _d.modelMap, lineMap = _d.lineMap, cache = _d.cache, legendManager = _d.legendManager, reverseAxis = _d.reverseAxis, initReverse = _d.initReverse;
             if (action === 'reset')
                 modelMap[TimeModelName] = new TimeModel(TimeModelName, TimeFieldName, 'horizontal');
             var rows = table.getRows();
@@ -4462,8 +4483,8 @@ var _wpcharts = (function (exports, d3) {
                     cache[key] = [row];
                 }
             }
-            for (var _i = 0, _c = Object.values(lineMap); _i < _c.length; _i++) {
-                var line = _c[_i];
+            for (var _i = 0, _e = Object.values(lineMap); _i < _e.length; _i++) {
+                var line = _e[_i];
                 var pointId = line.pointId, unit = line.unit, legend = line.legend, id = line.id;
                 line.data = table.select("PointId='" + pointId + "' and Unit='" + unit + "' and Legend='" + legend + "' and Value!='-99'");
                 line.table = table;
@@ -4473,13 +4494,17 @@ var _wpcharts = (function (exports, d3) {
                 if (line.data.length === 0)
                     delete lineMap[id];
             }
-            for (var _d = 0, _e = Object.values(modelMap); _d < _e.length; _d++) {
-                var model = _e[_d];
+            for (var _f = 0, _g = Object.values(modelMap); _f < _g.length; _f++) {
+                var model = _g[_f];
                 if (model.name === TimeModelName) {
                     model.data = table.columns(TimeFieldName);
                     model.range = [0, width];
                 }
                 else {
+                    console.log(123, model.name, model);
+                    if (((_b = (_a = model) === null || _a === void 0 ? void 0 : _a.name) === null || _b === void 0 ? void 0 : _b.indexOf('降雨')) > -1) {
+                        table.insert([null, model.name, null, null, 0]);
+                    }
                     var rowData = table.select("Unit='" + model.name + "'");
                     model.data = table.columns('Value', rowData, function (value) { return value !== -99; });
                     model.range = [height, 0];
@@ -4546,14 +4571,21 @@ var _wpcharts = (function (exports, d3) {
             var _a = this, lineMap = _a.lineMap, linesComponent = _a.linesComponent;
             for (var _i = 0, _b = Object.values(lineMap); _i < _b.length; _i++) {
                 var line = _b[_i];
-                line.drawLine(linesComponent);
+                if (line.unit.indexOf('降雨') > -1) {
+                    line.drawHistogram(linesComponent);
+                }
+                else {
+                    line.drawLine(linesComponent);
+                }
             }
         };
         Hydrograph.prototype.initPoints = function () {
             var _a = this, lineMap = _a.lineMap, pointsComponent = _a.pointsComponent;
             for (var _i = 0, _b = Object.values(lineMap); _i < _b.length; _i++) {
                 var line = _b[_i];
-                line.drawPoint(pointsComponent);
+                if (line.unit.indexOf('降雨') === -1) {
+                    line.drawPoint(pointsComponent);
+                }
             }
         };
         Hydrograph.prototype.initEvent = function () {
