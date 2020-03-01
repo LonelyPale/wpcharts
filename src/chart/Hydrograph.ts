@@ -454,7 +454,7 @@ export class Hydrograph extends Chart {
                 brushData.push(data[i]);
             }
 
-            if (brushData.length > 0) {
+            if (brushData.length > 0) {console.log(123, sxValue, exValue);
                 //console.log("MouseLeft:brushData:", brushData);
                 //let row = table.insert([pointId, unit, legend, suvDate, value]);
                 brushData.push([null, null, null, minCurrent, null]);//用于保持 x 轴格式不变

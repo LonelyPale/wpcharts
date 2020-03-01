@@ -4743,6 +4743,7 @@ var _wpcharts = (function (exports, d3) {
                     brushData.push(data[i]);
                 }
                 if (brushData.length > 0) {
+                    console.log(123, sxValue, exValue);
                     brushData.push([null, null, null, minCurrent, null]);
                     brushData.push([null, null, null, maxCurrent, null]);
                     _this.reset(brushData, true);

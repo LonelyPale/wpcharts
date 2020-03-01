@@ -7,18 +7,41 @@ export let parseTimeT = d3.timeParse("%Y-%m-%dT%H:%M:%S");
 export let formatTime = d3.timeFormat("%Y-%m-%d %H:%M:%S");
 export let formatTimeSimple = d3.timeFormat("%Y-%m-%d_%H-%M-%S");
 
-export let day = 24 * 60 * 60 * 1000; // 1天
-let month = 31 * day; // 1月,计算间隔是31天,实际显示是32天
-let year = 12 * month; // 1年
-let time_level1 = day; // 1天
-let time_level2 = month; // 1月
-let time_level3 = 3 * year; // 3年
-let time_level4 = 8 * year; // 8年
-let time_level5 = 20 * year; // 20年
-let time_level6 = 50 * year; // 60年
-//let time_level6 = 60 * year; // 60年
-let time_level7 = 75 * year; // 100年
-//let time_level7 = 100 * year; // 100年
+export const hour = 60 * 60 * 1000; // 1小时
+export const day = 24 * 60 * 60 * 1000; // 1天
+export const month = 31 * day; // 1月,计算间隔是31天,实际显示是32天
+export const year = 12 * month; // 1年
+export const time_level1 = day; // 1天: 每格一小时
+export const time_level2 = month; // 1月: 每格一天
+export const time_level3 = 3 * year; // 3年: 每格一月
+export const time_level4 = 8 * year; // 8年: 每格一季度
+export const time_level5 = 20 * year; // 20年: 每格一年
+export const time_level6 = 50 * year; // 50年: 每格两年
+//const time_level6 = 60 * year; // 60年
+export const time_level7 = 75 * year; // 75年: 每格三年
+//const time_level7 = 100 * year; // 100年
+
+//时间级别间隔
+export function getTimeLevelInterval(level: string): number {
+    switch (level) {
+        case 'time_level1':
+            return hour;
+        case 'time_level2':
+            return day;
+        case 'time_level3':
+            return month;
+        case 'time_level4':
+            return month * 3;
+        case 'time_level5':
+            return year;
+        case 'time_level6':
+            return year * 2;
+        case 'time_level7':
+            return year * 3;
+        default:
+            return 0;
+    }
+}
 
 function get_time_level(time_difference: number): string {
     let time_level;
