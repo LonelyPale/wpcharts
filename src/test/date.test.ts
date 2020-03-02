@@ -13,3 +13,23 @@ console.log(date.toDateString());
 console.log(date.toTimeString());
 console.log(date.toISOString());
 console.log(date.toUTCString());
+
+function printDate(date) {
+    console.log(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function test() {
+    let year = 2020;
+    for(let month = -12; month <= 11; month++) {
+        let date = new Date(year, month, 1);
+        printDate(date);
+    }
+}
+
+function test1() {
+    let d = new Date('Thu Jan 02 2014 21:06:56');
+    let d1 = new Date('Wed Jan 01 2014 00:00:00');
+    console.log(d);
+    console.log(d1);
+}
+test();

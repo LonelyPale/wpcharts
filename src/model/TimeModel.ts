@@ -14,12 +14,14 @@ export const year = 12 * month; // 1年
 export const time_level1 = day; // 1天: 每格一小时
 export const time_level2 = month; // 1月: 每格一天
 export const time_level3 = 3 * year; // 3年: 每格一月
-export const time_level4 = 8 * year; // 8年: 每格一季度
+export const time_level4 = 8 * year; // 8年: 每格一季度, 3个月
 export const time_level5 = 20 * year; // 20年: 每格一年
 export const time_level6 = 50 * year; // 50年: 每格两年
 //const time_level6 = 60 * year; // 60年
 export const time_level7 = 75 * year; // 75年: 每格三年
 //const time_level7 = 100 * year; // 100年
+
+export type TimeLevelType = 'start' | 'end';
 
 //时间级别间隔
 export function getTimeLevelInterval(level: string): number {
@@ -41,6 +43,112 @@ export function getTimeLevelInterval(level: string): number {
         default:
             return 0;
     }
+}
+
+export function getTimeLevelDate(date: Date, level: string, type: TimeLevelType, timeDifference: number) {
+    let newDate: Date = date;
+    let year = date.getFullYear();
+    let month = date.getMonth();
+    let day = date.getDate();
+    let hour = date.getHours();
+    let minute = date.getMinutes();
+    let second = date.getSeconds();
+    let symbol: number;
+
+    if(timeDifference > 0) {
+        symbol = 1; //时间向左移动
+    } else if(timeDifference < 0) {
+        symbol = -1; //时间向右移动
+    } else {
+        return date;
+    }
+
+    if(type === 'start') {
+        minute = 0;
+        second = 0;
+    } else if(type === 'end') {
+        minute = 59;
+        second = 59;
+    }
+
+    if(level === 'time_level1') {
+        hour = hour + symbol;
+    } else if(level === 'time_level2') {
+        if(type === 'start') {
+            hour = 0;
+        } else if(type === 'end') {
+            hour = 23;
+        }
+        day = day + symbol;
+    } else if(level === 'time_level3') {
+        month = month + symbol;
+        if(type === 'start') {
+            day = 1;
+            hour = 0;
+        } else if(type === 'end') {
+            day = getDayCount(year, month + 1); //year年month月的最大天数
+            hour = 23;
+        }
+    } else if(level === 'time_level4') {
+        month = month + symbol * 3;
+        if(type === 'start') {
+            day = 1;
+            hour = 0;
+        } else if(type === 'end') {
+            day = getDayCount(year, month + 1); //year年month月的最大天数
+            hour = 23;
+        }
+    } else if(level === 'time_level5') {
+        year = year + symbol;
+        if(type === 'start') {
+            month = 0;
+            day = 1;
+            hour = 0;
+        } else if(type === 'end') {
+            month = 11;
+            day = 31;
+            hour = 23;
+        }
+    } else if(level === 'time_level6') {
+        year = year + symbol * 2;
+        if(type === 'start') {
+            month = 0;
+            day = 1;
+            hour = 0;
+        } else if(type === 'end') {
+            month = 11;
+            day = 31;
+            hour = 23;
+        }
+    } else if(level === 'time_level7') {
+        year = year + symbol * 3;
+        if(type === 'start') {
+            month = 0;
+            day = 1;
+            hour = 0;
+        } else if(type === 'end') {
+            month = 11;
+            day = 31;
+            hour = 23;
+        }
+    }
+
+    newDate = new Date(year, month, day, hour, minute, second);
+
+    //console.log(111, symbol, newDate.toString(), date.toString(), level);
+    return newDate;
+}
+
+export function getTimeDomain(model: TimeModel, timeDifference: number): [Date, Date] {
+    let timeLevel = model.time_level;
+
+    let startDate: Date = model.domain[0];
+    let endDate: Date = model.domain[1];
+
+    startDate = getTimeLevelDate(startDate, timeLevel, 'start', timeDifference);
+    endDate = getTimeLevelDate(endDate, timeLevel, 'end', timeDifference);
+
+    return [startDate, endDate];
 }
 
 function get_time_level(time_difference: number): string {

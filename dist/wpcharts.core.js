@@ -1511,6 +1511,117 @@ var _wpcharts = (function (exports, d3) {
     var time_level5 = 20 * year;
     var time_level6 = 50 * year;
     var time_level7 = 75 * year;
+    function getTimeLevelDate(date, level, type, timeDifference) {
+        var newDate = date;
+        var year = date.getFullYear();
+        var month = date.getMonth();
+        var day = date.getDate();
+        var hour = date.getHours();
+        var minute = date.getMinutes();
+        var second = date.getSeconds();
+        var symbol;
+        if (timeDifference > 0) {
+            symbol = 1;
+        }
+        else if (timeDifference < 0) {
+            symbol = -1;
+        }
+        else {
+            return date;
+        }
+        if (type === 'start') {
+            minute = 0;
+            second = 0;
+        }
+        else if (type === 'end') {
+            minute = 59;
+            second = 59;
+        }
+        if (level === 'time_level1') {
+            hour = hour + symbol;
+        }
+        else if (level === 'time_level2') {
+            if (type === 'start') {
+                hour = 0;
+            }
+            else if (type === 'end') {
+                hour = 23;
+            }
+            day = day + symbol;
+        }
+        else if (level === 'time_level3') {
+            month = month + symbol;
+            if (type === 'start') {
+                day = 1;
+                hour = 0;
+            }
+            else if (type === 'end') {
+                day = getDayCount(year, month + 1);
+                hour = 23;
+            }
+        }
+        else if (level === 'time_level4') {
+            month = month + symbol * 3;
+            if (type === 'start') {
+                day = 1;
+                hour = 0;
+            }
+            else if (type === 'end') {
+                day = getDayCount(year, month + 1);
+                hour = 23;
+            }
+        }
+        else if (level === 'time_level5') {
+            year = year + symbol;
+            if (type === 'start') {
+                month = 0;
+                day = 1;
+                hour = 0;
+            }
+            else if (type === 'end') {
+                month = 11;
+                day = 31;
+                hour = 23;
+            }
+        }
+        else if (level === 'time_level6') {
+            year = year + symbol * 2;
+            if (type === 'start') {
+                month = 0;
+                day = 1;
+                hour = 0;
+            }
+            else if (type === 'end') {
+                month = 11;
+                day = 31;
+                hour = 23;
+            }
+        }
+        else if (level === 'time_level7') {
+            year = year + symbol * 3;
+            if (type === 'start') {
+                month = 0;
+                day = 1;
+                hour = 0;
+            }
+            else if (type === 'end') {
+                month = 11;
+                day = 31;
+                hour = 23;
+            }
+        }
+        newDate = new Date(year, month, day, hour, minute, second);
+        console.log('getTimeLevelDate():', symbol, newDate.toString(), date.toString(), level);
+        return newDate;
+    }
+    function getTimeDomain(model, timeDifference) {
+        var timeLevel = model.time_level;
+        var startDate = model.domain[0];
+        var endDate = model.domain[1];
+        startDate = getTimeLevelDate(startDate, timeLevel, 'start', timeDifference);
+        endDate = getTimeLevelDate(endDate, timeLevel, 'end', timeDifference);
+        return [startDate, endDate];
+    }
     function get_time_level(time_difference) {
         var time_level;
         if (time_difference <= time_level1) {
@@ -4721,17 +4832,14 @@ var _wpcharts = (function (exports, d3) {
             this.svg.on(MouseLeft, function () {
                 var _a = d3.event.detail, startPosition = _a.startPosition, endPosition = _a.endPosition;
                 var _b = _this, modelMap = _b.modelMap, tableBackup = _b.tableBackup;
+                var time = modelMap['time'];
                 var sx = startPosition[0], sy = startPosition[1];
                 var ex = endPosition[0], ey = endPosition[1];
-                var time = modelMap['time'];
-                var minLast = time.min.getTime();
-                var maxLast = time.max.getTime();
                 var sxValue, exValue;
                 sxValue = time.scale.invert(sx);
                 exValue = time.scale.invert(ex);
                 var time_difference_new = -(exValue - sxValue);
-                var minCurrent = new Date(minLast + time_difference_new);
-                var maxCurrent = new Date(maxLast + time_difference_new);
+                var _c = getTimeDomain(time, time_difference_new), minCurrent = _c[0], maxCurrent = _c[1];
                 sxValue = formatTime(minCurrent);
                 exValue = formatTime(maxCurrent);
                 var brushData = [];
@@ -4743,7 +4851,6 @@ var _wpcharts = (function (exports, d3) {
                     brushData.push(data[i]);
                 }
                 if (brushData.length > 0) {
-                    console.log(123, sxValue, exValue);
                     brushData.push([null, null, null, minCurrent, null]);
                     brushData.push([null, null, null, maxCurrent, null]);
                     _this.reset(brushData, true);

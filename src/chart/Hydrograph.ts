@@ -1,6 +1,6 @@
 import d3 from "d3";
 import {Chart} from "./Chart";
-import {parseTime, TimeModel, formatTime, day} from "../model/TimeModel";
+import {parseTime, TimeModel, formatTime, day, getTimeLevelDate, getTimeDomain} from "../model/TimeModel";
 import {LinearModel} from "../model/LinearModel";
 import {TimeAxis} from "../component/axis/TimeAxis";
 import {LinearAxis} from "../component/axis/LinearAxis";
@@ -425,23 +425,28 @@ export class Hydrograph extends Chart {
         this.svg.on(MouseLeft, () => {
             let {detail: {startPosition, endPosition}} = d3.event;
             let {modelMap, tableBackup} = this;
-
+            let time = <TimeModel>modelMap['time'];
             let [sx, sy] = startPosition;
             let [ex, ey] = endPosition;
-
-            let time = <TimeModel>modelMap['time'];
-            let minLast = (<Date>time.min).getTime();
-            let maxLast = (<Date>time.max).getTime();
 
             let sxValue, exValue;
             sxValue = time.scale.invert(sx);
             exValue = time.scale.invert(ex);
-
             let time_difference_new = -(exValue - sxValue);
+
+            let [minCurrent, maxCurrent] = getTimeDomain(time, time_difference_new);
+            sxValue = formatTime(minCurrent);
+            exValue = formatTime(maxCurrent);
+
+            /*
+            //last: 基于值判断
+            let minLast = (<Date>time.min).getTime();
+            let maxLast = (<Date>time.max).getTime();
             let minCurrent = new Date(minLast + time_difference_new);
             let maxCurrent = new Date(maxLast + time_difference_new);
             sxValue = formatTime(minCurrent);
             exValue = formatTime(maxCurrent);
+            */
 
             let brushData: any[] = [];
             let data: any[];
@@ -454,7 +459,7 @@ export class Hydrograph extends Chart {
                 brushData.push(data[i]);
             }
 
-            if (brushData.length > 0) {console.log(123, sxValue, exValue);
+            if (brushData.length > 0) {
                 //console.log("MouseLeft:brushData:", brushData);
                 //let row = table.insert([pointId, unit, legend, suvDate, value]);
                 brushData.push([null, null, null, minCurrent, null]);//用于保持 x 轴格式不变

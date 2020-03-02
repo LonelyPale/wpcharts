@@ -17,8 +17,9 @@ export function isLeapYear(year: number) {
 }
 
 //得到一个月的总天数
-//初始化d为月份的第0天，由于JavaScript中day的范围为1~31中的值，所以当设为0时，会向前一天，也即表示上个月的最后一天。自动处理闰年。特殊情况:此处传入的月份应为 1 - 12 (其他时候正常情况应为: 0 - 11)
-export function getDayCount(year: number, month: number) {
+//初始化d为月份的第0天，由于JavaScript中day的范围为1~31中的值，所以当设为0时，会向前一天，也即表示上个月的最后一天。
+//自动处理闰年。特殊情况:此处传入的月份应为 1 - 12 (其他时候正常情况应为: 0 - 11)
+export function getDayCount(year: number, month: number): number {
     let d = new Date(year, month, 0);
     return d.getDate();
 }
