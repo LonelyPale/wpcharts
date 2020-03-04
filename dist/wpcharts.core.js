@@ -1611,7 +1611,6 @@ var _wpcharts = (function (exports, d3) {
             }
         }
         newDate = new Date(year, month, day, hour, minute, second);
-        console.log('getTimeLevelDate():', symbol, newDate.toString(), date.toString(), level);
         return newDate;
     }
     function getTimeDomain(model, timeDifference) {
@@ -3212,7 +3211,7 @@ var _wpcharts = (function (exports, d3) {
                     _this.state.keyboard.isCtrl = true;
                     _this.state.eventType = ZoomEvent;
                     var x = startPosition[0], y = startPosition[1];
-                    startPosition = [x, 0];
+                    startPosition = [0, y];
                 }
                 else if (d3.event.shiftKey) {
                     _this.state.keyboard.isShift = true;
@@ -3292,7 +3291,13 @@ var _wpcharts = (function (exports, d3) {
                     vline.attr({ x1: x + xDeviation, x2: x + xDeviation });
                     if (startPosition) {
                         if (_this.state.eventType === ZoomEvent) {
-                            y = gh;
+                            var clazz = _this.constructor.clazz;
+                            if (clazz === 'distribution' && !_this.isHorizontal) {
+                                x = gw;
+                            }
+                            else {
+                                y = gh;
+                            }
                             var sx = startPosition[0], sy = startPosition[1];
                             var w = Math.abs(x - sx);
                             var h = Math.abs(y - sy);

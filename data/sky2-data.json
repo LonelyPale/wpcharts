@@ -2,7 +2,7 @@
   "IsSplitType": true,
   "InitReverse": ["温度℃","开度mm123"],
   "InitWarningValue": ["温度℃"],
-  "WarningValue": {"Unit": "温度℃", "Values": [10, 15, 20, 25]},
+  "WarningValue": {"Unit": "温度℃", "Values": [10, null, 20, null]},
   "Title": "测缝计测值过程线-是否拆分类型-警戒值-初始反转",
   "IsTwoYAxis": true,
   "Y1AxisUnit": "温度℃",

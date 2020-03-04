@@ -655,7 +655,7 @@ export abstract class Chart implements IChart {
                 this.state.keyboard.isCtrl = true;
                 this.state.eventType = ZoomEvent;
                 let [x, y] = startPosition;
-                startPosition = [x, 0];
+                startPosition = this.isVerticalDistribution() ? [0, y] : [x, 0];//垂直分布图纵向选、其它图横向选
             } else if(d3.event.shiftKey) {//按下 Shift 键
                 //console.log(2, d3.event);
                 this.state.keyboard.isShift = true;
@@ -747,7 +747,12 @@ export abstract class Chart implements IChart {
 
                 if(startPosition) {
                     if (this.state.eventType === ZoomEvent) {
-                        y = gh;//可框选的最大高度
+                        if(this.isVerticalDistribution()) {//垂直分布图纵向选、其它图横向选
+                            x = gw;//可选的最大宽度
+                        } else {
+                            y = gh;//可框选的最大高度
+                        }
+
                         let [sx, sy] = startPosition;
                         let w = Math.abs(x - sx);
                         let h = Math.abs(y - sy);
@@ -762,6 +767,7 @@ export abstract class Chart implements IChart {
                         } else {
                             my = sy - h;
                         }
+
                         brushRect.attr({width: w, height: h, x: mx, y: my}).show();
                     } else if(this.state.eventType === BrushEvent) {//# brush 选择, 显示矩形框
                         let [sx, sy] = startPosition;
@@ -1057,6 +1063,14 @@ export abstract class Chart implements IChart {
         if (newData.length > 0) {
             this.reset(newData);
         }
+    }
+
+    //是否垂直分布图
+    public isVerticalDistribution(): boolean {
+        let clazz = (<ChartConstructor>this.constructor).clazz;
+        // @ts-ignore
+        let isVertical = !this.isHorizontal;
+        return clazz === 'distribution' && isVertical;
     }
 
     outputPreprocessing() {
