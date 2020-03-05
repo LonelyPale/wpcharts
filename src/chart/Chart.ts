@@ -627,6 +627,24 @@ export abstract class Chart implements IChart {
         let startPosition: number[] | undefined;
         let endPosition: number[] | undefined;
 
+        // keydown 按下、keypress 按住、keyup 放开
+        d3.select(document).on('keydown', () => {
+            let event = d3.event;
+            this.state.keyboard.isCtrl = event.ctrlKey;
+            this.state.keyboard.isShift = event.shiftKey;
+            event.stopPropagation();
+            event.preventDefault();
+            //console.log('keydown:', event);
+        });
+        d3.select(document).on('keyup', () => {
+            let event = d3.event;
+            this.state.keyboard.isCtrl = event.ctrlKey;
+            this.state.keyboard.isShift = event.shiftKey;
+            event.stopPropagation();
+            event.preventDefault();
+            //console.log('keyup:', event);
+        });
+
         //鼠标移入
         rect.on('mouseover', () => {
             //console.log("event: mouseover");
@@ -687,15 +705,6 @@ export abstract class Chart implements IChart {
                 endPosition = [x, gh];
                 this.svg.dispatch(BrushEvent, {bubbles: false, cancelable: false, detail: {startPosition, endPosition}});
             } else if(this.state.eventType === BrushEvent) {
-                layui.layer.confirm('您是否要<span style="color: red">保存粗差</span>？', {
-                    title: ['操作', 'font-size:18px;'],
-                    btn: ['保存粗差', '取消粗差'],
-                    btnAlign: 'c',
-                }, function () {
-                    Message.msg('<span style="color: darkgreen">保存粗差</span>');
-                }, function () {
-                    Message.msg('取消粗差');
-                });
                 //# 触发刷子框选事件
                 this.svg.dispatch(BrushEvent, {bubbles: false, cancelable: false, detail: {startPosition, endPosition}});
             } else if(this.state.eventType === TranslationEvent) {

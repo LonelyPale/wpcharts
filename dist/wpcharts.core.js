@@ -2814,7 +2814,7 @@ var _wpcharts = (function (exports, d3) {
     catch (e) {
         _fetch = require('node-fetch');
     }
-    var fetch = _fetch;
+    var fetch$1 = _fetch;
     var Chart = (function () {
         function Chart(selector) {
             this.action = 'all';
@@ -2847,7 +2847,7 @@ var _wpcharts = (function (exports, d3) {
                 if (typeof body === 'object') {
                     this.option.request.body = formurlencoded(body);
                 }
-                fetch(url, request).then(function (response) {
+                fetch$1(url, request).then(function (response) {
                     try {
                         return response.json();
                     }
@@ -3161,7 +3161,7 @@ var _wpcharts = (function (exports, d3) {
         Chart.prototype.initCSS = function () {
             var self = this;
             if (isBrowser) {
-                fetch("/wpcharts/dist/css/wpcharts.css").then(function (response) {
+                fetch$1("/wpcharts/dist/css/wpcharts.css").then(function (response) {
                     return response.text();
                 }).then(function (text) {
                     self.styleComponent.text(text);
@@ -3192,6 +3192,20 @@ var _wpcharts = (function (exports, d3) {
             var timer;
             var startPosition;
             var endPosition;
+            d3.select(document).on('keydown', function () {
+                var event = d3.event;
+                _this.state.keyboard.isCtrl = event.ctrlKey;
+                _this.state.keyboard.isShift = event.shiftKey;
+                event.stopPropagation();
+                event.preventDefault();
+            });
+            d3.select(document).on('keyup', function () {
+                var event = d3.event;
+                _this.state.keyboard.isCtrl = event.ctrlKey;
+                _this.state.keyboard.isShift = event.shiftKey;
+                event.stopPropagation();
+                event.preventDefault();
+            });
             rect.on('mouseover', function () {
                 d3.event.preventDefault();
                 hline.show();
@@ -3211,7 +3225,7 @@ var _wpcharts = (function (exports, d3) {
                     _this.state.keyboard.isCtrl = true;
                     _this.state.eventType = ZoomEvent;
                     var x = startPosition[0], y = startPosition[1];
-                    startPosition = [0, y];
+                    startPosition = _this.isVerticalDistribution() ? [0, y] : [x, 0];
                 }
                 else if (d3.event.shiftKey) {
                     _this.state.keyboard.isShift = true;
@@ -3238,15 +3252,6 @@ var _wpcharts = (function (exports, d3) {
                     _this.svg.dispatch(BrushEvent, { bubbles: false, cancelable: false, detail: { startPosition: startPosition, endPosition: endPosition } });
                 }
                 else if (_this.state.eventType === BrushEvent) {
-                    layui.layer.confirm('您是否要<span style="color: red">保存粗差</span>？', {
-                        title: ['操作', 'font-size:18px;'],
-                        btn: ['保存粗差', '取消粗差'],
-                        btnAlign: 'c',
-                    }, function () {
-                        Message.msg('<span style="color: darkgreen">保存粗差</span>');
-                    }, function () {
-                        Message.msg('取消粗差');
-                    });
                     _this.svg.dispatch(BrushEvent, { bubbles: false, cancelable: false, detail: { startPosition: startPosition, endPosition: endPosition } });
                 }
                 else if (_this.state.eventType === TranslationEvent) {
@@ -3291,8 +3296,7 @@ var _wpcharts = (function (exports, d3) {
                     vline.attr({ x1: x + xDeviation, x2: x + xDeviation });
                     if (startPosition) {
                         if (_this.state.eventType === ZoomEvent) {
-                            var clazz = _this.constructor.clazz;
-                            if (clazz === 'distribution' && !_this.isHorizontal) {
+                            if (_this.isVerticalDistribution()) {
                                 x = gw;
                             }
                             else {
@@ -3390,7 +3394,7 @@ var _wpcharts = (function (exports, d3) {
         };
         Chart.prototype.initOther = function () {
             if (isBrowser) {
-                fetch("/api/image/config").then(function (response) {
+                fetch$1("/api/image/config").then(function (response) {
                     return response.json();
                 }).then(function (data) {
                     extend(config, data);
@@ -3559,6 +3563,11 @@ var _wpcharts = (function (exports, d3) {
                 this.reset(newData);
             }
         };
+        Chart.prototype.isVerticalDistribution = function () {
+            var clazz = this.constructor.clazz;
+            var isVertical = !this.isHorizontal;
+            return clazz === 'distribution' && isVertical;
+        };
         Chart.prototype.outputPreprocessing = function () {
             this.menu.hide();
         };
@@ -3683,7 +3692,7 @@ var _wpcharts = (function (exports, d3) {
             if (this.backgroundImage) {
                 url += '?img=' + this.backgroundImage;
             }
-            fetch(url, {
+            fetch$1(url, {
                 method: 'POST',
                 body: content,
                 mode: 'cors',
@@ -3793,7 +3802,7 @@ var _wpcharts = (function (exports, d3) {
             if (this.backgroundImage) {
                 url += '&img=' + this.backgroundImage;
             }
-            fetch(url, {
+            fetch$1(url, {
                 method: 'POST',
                 body: content,
                 mode: 'cors',
@@ -3817,7 +3826,7 @@ var _wpcharts = (function (exports, d3) {
             if (this.backgroundImage) {
                 url += '&img=' + this.backgroundImage;
             }
-            fetch(url, {
+            fetch$1(url, {
                 method: 'POST',
                 body: content,
                 mode: 'cors',
@@ -4505,7 +4514,8 @@ var _wpcharts = (function (exports, d3) {
                     Unit: 'string',
                     Legend: 'string',
                     SuvDate: 'Date',
-                    Value: 'number'
+                    Value: 'number',
+                    Id: 'string',
                 }
             };
             _this.table = _this.db.create(schema);
@@ -4551,7 +4561,8 @@ var _wpcharts = (function (exports, d3) {
                     var point = line.ObservPointList[j];
                     var value = parseFloat(point.Value);
                     var suvDate = parseTime(point.SuvDate);
-                    var row = table.insert([pointId, unit, legend, suvDate, value]);
+                    var idstr = point.Id;
+                    var row = table.insert([pointId, unit, legend, suvDate, value, idstr]);
                 }
             }
             this.title = this.data.Title || this.title;
@@ -4791,7 +4802,57 @@ var _wpcharts = (function (exports, d3) {
                     }
                 }
                 if (brushData.length > 0) {
-                    _this.reset(brushData, true);
+                    if (_this.state.keyboard.isShift) {
+                        var idarr = [];
+                        for (var _f = 0, brushData_1 = brushData; _f < brushData_1.length; _f++) {
+                            var point = brushData_1[_f];
+                            var idstr = table.field('Id', point);
+                            idarr.push(idstr);
+                        }
+                        var url_1 = '/business/basic/datamanage/setEignoteByIds';
+                        var body_1 = { ids: idarr.join(','), operation: '' };
+                        var request_1 = { method: 'POST', body: '', credentials: 'include', mode: 'cors' };
+                        layui.layer.confirm('您是否要<span style="color: red">保存粗差</span>？', {
+                            title: ['操作', 'font-size:18px;'],
+                            btn: ['保存粗差', '取消粗差'],
+                            btnAlign: 'c',
+                        }, function (index) {
+                            try {
+                                body_1.operation = 'GrossError';
+                                request_1.body = JSON.stringify(body_1);
+                                fetch(url_1, request_1).then(function (response) {
+                                    return response.text();
+                                }).then(function (data) {
+                                    console.log(11, data);
+                                }).catch(function (error) {
+                                    console.error(12, error);
+                                });
+                            }
+                            catch (e) {
+                                console.error(e);
+                            }
+                            layui.layer.close(index);
+                        }, function (index) {
+                            try {
+                                body_1.operation = 'Normal';
+                                request_1.body = JSON.stringify(body_1);
+                                fetch(url_1, request_1).then(function (response) {
+                                    return response.text();
+                                }).then(function (data) {
+                                    console.log(21, data);
+                                }).catch(function (error) {
+                                    console.error(22, error);
+                                });
+                            }
+                            catch (e) {
+                                console.error(e);
+                            }
+                            layui.layer.close(index);
+                        });
+                    }
+                    else {
+                        _this.reset(brushData, true);
+                    }
                 }
             });
             this.svg.on(MouseWheel, function () {

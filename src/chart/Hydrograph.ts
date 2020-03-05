@@ -5,7 +5,7 @@ import {LinearModel} from "../model/LinearModel";
 import {TimeAxis} from "../component/axis/TimeAxis";
 import {LinearAxis} from "../component/axis/LinearAxis";
 import {Path} from "../svg/Path";
-import {clone} from "../util/common";
+import {clone, extend} from "../util/common";
 import {Schema} from "../rdb/Schema";
 import {Text} from "../svg/Text";
 import {Row} from "../rdb/Row";
@@ -15,6 +15,8 @@ import {BrushEvent, MouseLeft, MouseWheel, TooltipsEvent} from "../event/EventTy
 import {View} from "../view/View";
 import {LineObject, LineObjectTag} from "../object/LineObject";
 import {TimeModelName, TimeFieldName} from "../constant";
+import {Message} from "../ui/Message";
+import {config} from "../config";
 
 export class Hydrograph extends Chart {
 
@@ -31,7 +33,8 @@ export class Hydrograph extends Chart {
                 Unit: 'string',
                 Legend: 'string',
                 SuvDate: 'Date',
-                Value: 'number'
+                Value: 'number',
+                Id: 'string',
             }
         };
         this.table = this.db.create(schema);
@@ -90,7 +93,8 @@ export class Hydrograph extends Chart {
                 let point = line.ObservPointList[j];
                 let value = parseFloat(point.Value);
                 let suvDate = <Date>parseTime(point.SuvDate);
-                let row = table.insert([pointId, unit, legend, suvDate, value]); //#保存处理后的数据
+                let idstr = point.Id;
+                let row = table.insert([pointId, unit, legend, suvDate, value, idstr]); //#保存处理后的数据
             }
         }
 
@@ -362,7 +366,57 @@ export class Hydrograph extends Chart {
             }
 
             if (brushData.length > 0) {
-                this.reset(brushData, true);
+                if(this.state.keyboard.isShift) {
+                    let idarr = [];
+                    for(let point of brushData) {
+                        let idstr = table.field('Id', point);
+                        idarr.push(idstr);
+                    }
+                    let url = '/business/basic/datamanage/setEignoteByIds';
+                    let body = {ids: idarr.join(','), operation: ''};
+                    let request: RequestInit = {method: 'POST', body: '', credentials: 'include', mode: 'cors'};
+
+                    layui.layer.confirm('您是否要<span style="color: red">保存粗差</span>？', {
+                        title: ['操作', 'font-size:18px;'],
+                        btn: ['保存粗差', '取消粗差'],
+                        btnAlign: 'c',
+                    }, function (index: number) {
+                        try {
+                            //Message.msg('<span style="color: darkgreen">保存粗差</span>');
+                            body.operation = 'GrossError';
+                            request.body = JSON.stringify(body);
+                            fetch(url, request).then(function (response: Response) {
+                                return response.text();
+                            }).then(function (data: any) {
+                                console.log(11, data);
+                            }).catch(function (error: any) {
+                                console.error(12, error);
+                            });
+                        } catch (e) {
+                            console.error(e);
+                        }
+                        layui.layer.close(index);
+                    }, function (index: number) {
+                        //Message.msg('取消粗差');
+                        try {
+                            //Message.msg('<span style="color: darkgreen">保存粗差</span>');
+                            body.operation = 'Normal';
+                            request.body = JSON.stringify(body);
+                            fetch(url, request).then(function (response: Response) {
+                                return response.text();
+                            }).then(function (data: any) {
+                                console.log(21, data);
+                            }).catch(function (error: any) {
+                                console.error(22, error);
+                            });
+                        } catch (e) {
+                            console.error(e);
+                        }
+                        layui.layer.close(index);
+                    });
+                } else {
+                    this.reset(brushData, true);
+                }
             }
         });
 

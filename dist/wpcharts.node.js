@@ -894,7 +894,12 @@ var SvgObject = (function () {
         return this.svgContext;
     };
     SvgObject.prototype.getChildren = function (id) {
-        return this.children[id];
+        if (typeof id === "string") {
+            return this.children[id];
+        }
+        else {
+            return this.children;
+        }
     };
     SvgObject.prototype.id = function () {
         return this.attribute[id];
@@ -936,26 +941,10 @@ var Svg = (function (_super) {
         this.append(menu);
         this.on('click', function () { return menu.hide(); });
         this.on('contextmenu', function () {
-            console.log('event: contextmenu', d3.event);
             d3.event.preventDefault();
             var event = d3.event;
             if (event.ctrlKey || event.shiftKey)
                 return;
-            var node = document.elementFromPoint(event.x, event.y);
-            console.log('event: contextmenu: node:', node);
-            var path = event.path;
-            if (path && path.length > 0) {
-                for (var i = 0; i < path.length; i++) {
-                    var node_1 = path[i];
-                    var classList = node_1.classList;
-                    if (classList && classList.length > 0) {
-                        for (var j = 0; j < classList.length; j++) {
-                            if (classList[j] === 'legends')
-                                console.log("123321");
-                        }
-                    }
-                }
-            }
             var x = event.offsetX || 0;
             var y = event.offsetY || 0;
             var menuWidth = menu.getView().width;
@@ -968,6 +957,7 @@ var Svg = (function (_super) {
             if (y + menuHeight > svgHeight) {
                 y -= menuHeight;
             }
+            menu.event = event;
             menu.attr('transform', "translate(" + x + ", " + y + ")");
             menu.show();
         });
@@ -1219,6 +1209,71 @@ var Menu = (function (_super) {
         });
         return this;
     };
+    Menu.prototype.show = function () {
+        var isDelete = false;
+        var path = d3.event.path;
+        if (path.length > 0) {
+            for (var i = 0; i < path.length; i++) {
+                var node = path[i];
+                var classList = node.classList;
+                if (classList && classList.length > 0) {
+                    for (var j = 0; j < classList.length; j++) {
+                        if (classList[j] === 'legends') {
+                            isDelete = true;
+                            break;
+                        }
+                    }
+                }
+                if (isDelete)
+                    break;
+            }
+        }
+        for (var _i = 0, _a = Object.values(this.children); _i < _a.length; _i++) {
+            var menuItem = _a[_i];
+            if (menuItem instanceof MenuItem) {
+                if (menuItem.property.text === '删除线') {
+                    if (isDelete) {
+                        menuItem.event = this.event;
+                        menuItem.show();
+                    }
+                    else {
+                        menuItem.hide();
+                    }
+                }
+            }
+        }
+        var countHideItem = 0;
+        for (var _b = 0, _c = Object.values(this.children); _b < _c.length; _b++) {
+            var item = _c[_b];
+            var view = item.getView();
+            if (item instanceof Menu) {
+                if (item.style('display') === 'none') {
+                    countHideItem++;
+                }
+                else {
+                    item.transform("translate(" + view.tx + ", " + (view.ty - countHideItem * MenuItem.Height) + ")", true);
+                }
+            }
+            else if (item instanceof MenuItem) {
+                if (item.style('display') === 'none') {
+                    countHideItem++;
+                }
+                else {
+                    item.transform("translate(" + view.tx + ", " + (view.ty - countHideItem * MenuItem.Height) + ")", true);
+                }
+            }
+            else if (item instanceof MenuSeparator) {
+                if (item.style('display') === 'none') {
+                    countHideItem++;
+                }
+                else {
+                    item.transform("translate(" + view.tx + ", " + (view.ty - countHideItem * MenuItem.Height) + ")", true);
+                }
+            }
+        }
+        this.layout.attr('height', this.view.height - countHideItem * MenuItem.Height);
+        return _super.prototype.show.call(this);
+    };
     Menu.ClassName = 'menu';
     return Menu;
 }(Component));
@@ -1459,6 +1514,116 @@ var time_level4 = 8 * year;
 var time_level5 = 20 * year;
 var time_level6 = 50 * year;
 var time_level7 = 75 * year;
+function getTimeLevelDate(date, level, type, timeDifference) {
+    var newDate = date;
+    var year = date.getFullYear();
+    var month = date.getMonth();
+    var day = date.getDate();
+    var hour = date.getHours();
+    var minute = date.getMinutes();
+    var second = date.getSeconds();
+    var symbol;
+    if (timeDifference > 0) {
+        symbol = 1;
+    }
+    else if (timeDifference < 0) {
+        symbol = -1;
+    }
+    else {
+        return date;
+    }
+    if (type === 'start') {
+        minute = 0;
+        second = 0;
+    }
+    else if (type === 'end') {
+        minute = 59;
+        second = 59;
+    }
+    if (level === 'time_level1') {
+        hour = hour + symbol;
+    }
+    else if (level === 'time_level2') {
+        if (type === 'start') {
+            hour = 0;
+        }
+        else if (type === 'end') {
+            hour = 23;
+        }
+        day = day + symbol;
+    }
+    else if (level === 'time_level3') {
+        month = month + symbol;
+        if (type === 'start') {
+            day = 1;
+            hour = 0;
+        }
+        else if (type === 'end') {
+            day = getDayCount(year, month + 1);
+            hour = 23;
+        }
+    }
+    else if (level === 'time_level4') {
+        month = month + symbol * 3;
+        if (type === 'start') {
+            day = 1;
+            hour = 0;
+        }
+        else if (type === 'end') {
+            day = getDayCount(year, month + 1);
+            hour = 23;
+        }
+    }
+    else if (level === 'time_level5') {
+        year = year + symbol;
+        if (type === 'start') {
+            month = 0;
+            day = 1;
+            hour = 0;
+        }
+        else if (type === 'end') {
+            month = 11;
+            day = 31;
+            hour = 23;
+        }
+    }
+    else if (level === 'time_level6') {
+        year = year + symbol * 2;
+        if (type === 'start') {
+            month = 0;
+            day = 1;
+            hour = 0;
+        }
+        else if (type === 'end') {
+            month = 11;
+            day = 31;
+            hour = 23;
+        }
+    }
+    else if (level === 'time_level7') {
+        year = year + symbol * 3;
+        if (type === 'start') {
+            month = 0;
+            day = 1;
+            hour = 0;
+        }
+        else if (type === 'end') {
+            month = 11;
+            day = 31;
+            hour = 23;
+        }
+    }
+    newDate = new Date(year, month, day, hour, minute, second);
+    return newDate;
+}
+function getTimeDomain(model, timeDifference) {
+    var timeLevel = model.time_level;
+    var startDate = model.domain[0];
+    var endDate = model.domain[1];
+    startDate = getTimeLevelDate(startDate, timeLevel, 'start', timeDifference);
+    endDate = getTimeLevelDate(endDate, timeLevel, 'end', timeDifference);
+    return [startDate, endDate];
+}
 function get_time_level(time_difference) {
     var time_level;
     if (time_difference <= time_level1) {
@@ -2391,7 +2556,6 @@ var Legend = (function () {
         var g1 = new G(attr).setView({ width: 148, height: 22, top: 5, bottom: 5, left: 5, right: 5, boxOrient: "horizontal" });
         context.append(g1);
         var rect = g1.append(new Rect({ width: 148, height: 22, class: 'legend-rect' }).setView({}));
-        rect.on('contextmenu', function () { console.log(222); });
         var g2 = new G().setView({ width: 148, height: 22, top: 5, bottom: 5, left: 3, right: 5, boxOrient: "horizontal" });
         g1.append(g2);
         var line = g2.append(new Line({ x1: 0, y1: 6, x2: 25, y2: 6, stroke: this.color, class: 'legend-line' }).setView({}));
@@ -2653,7 +2817,7 @@ try {
 catch (e) {
     _fetch = require('node-fetch');
 }
-var fetch = _fetch;
+var fetch$1 = _fetch;
 var Chart = (function () {
     function Chart(selector) {
         this.action = 'all';
@@ -2668,6 +2832,7 @@ var Chart = (function () {
         this.modelMap = {};
         this.lineMap = {};
         this.legendManager = new LegendManager();
+        this.deletedLineMap = {};
         this.seriesMap = {};
         this.backgroundImage = '';
         this.reverseAxis = false;
@@ -2685,7 +2850,7 @@ var Chart = (function () {
             if (typeof body === 'object') {
                 this.option.request.body = formurlencoded(body);
             }
-            fetch(url, request).then(function (response) {
+            fetch$1(url, request).then(function (response) {
                 try {
                     return response.json();
                 }
@@ -2836,6 +3001,36 @@ var Chart = (function () {
         downloadMenuItem.append(downloadMenu);
         downloadMenu.append(downloadPNGMenuItem);
         downloadMenu.append(downloadEMFMenuItem);
+        var deleteChartMenuItem = new MenuItem({
+            text: '删除图',
+            action: function () {
+                console.log("删除 Chart");
+                self.clear();
+                self.remove();
+            }
+        });
+        var deleteLineMenuItem = new MenuItem({
+            text: '删除线',
+            action: function (menuItem) {
+                console.log("删除 Line:", menuItem);
+                var path = menuItem.event.path;
+                for (var _i = 0, path_1 = path; _i < path_1.length; _i++) {
+                    var item = path_1[_i];
+                    if (item.getAttribute && item.getAttribute("pointId")) {
+                        var pointId = item.getAttribute("pointId");
+                        var unit = item.getAttribute("unit");
+                        var legend = item.getAttribute("legend");
+                        var id = pointId + '-' + unit + '-' + legend;
+                        self.deletedLineMap[id] = self.lineMap[id];
+                        console.log('删除:', id);
+                        self.deleteLine(pointId, unit, legend);
+                    }
+                }
+            }
+        });
+        rootMenu.append(new MenuSeparator());
+        rootMenu.append(deleteChartMenuItem);
+        rootMenu.append(deleteLineMenuItem);
         if (config.debug) {
             var keyEvent = (function () {
                 document.onkeydown = function (e) {
@@ -2969,7 +3164,7 @@ var Chart = (function () {
     Chart.prototype.initCSS = function () {
         var self = this;
         if (isBrowser) {
-            fetch("/wpcharts/dist/css/wpcharts.css").then(function (response) {
+            fetch$1("/wpcharts/dist/css/wpcharts.css").then(function (response) {
                 return response.text();
             }).then(function (text) {
                 self.styleComponent.text(text);
@@ -3000,6 +3195,20 @@ var Chart = (function () {
         var timer;
         var startPosition;
         var endPosition;
+        d3.select(document).on('keydown', function () {
+            var event = d3.event;
+            _this.state.keyboard.isCtrl = event.ctrlKey;
+            _this.state.keyboard.isShift = event.shiftKey;
+            event.stopPropagation();
+            event.preventDefault();
+        });
+        d3.select(document).on('keyup', function () {
+            var event = d3.event;
+            _this.state.keyboard.isCtrl = event.ctrlKey;
+            _this.state.keyboard.isShift = event.shiftKey;
+            event.stopPropagation();
+            event.preventDefault();
+        });
         rect.on('mouseover', function () {
             d3.event.preventDefault();
             hline.show();
@@ -3019,7 +3228,7 @@ var Chart = (function () {
                 _this.state.keyboard.isCtrl = true;
                 _this.state.eventType = ZoomEvent;
                 var x = startPosition[0], y = startPosition[1];
-                startPosition = [x, 0];
+                startPosition = _this.isVerticalDistribution() ? [0, y] : [x, 0];
             }
             else if (d3.event.shiftKey) {
                 _this.state.keyboard.isShift = true;
@@ -3046,15 +3255,6 @@ var Chart = (function () {
                 _this.svg.dispatch(BrushEvent, { bubbles: false, cancelable: false, detail: { startPosition: startPosition, endPosition: endPosition } });
             }
             else if (_this.state.eventType === BrushEvent) {
-                layui.layer.confirm('您是否要<span style="color: red">保存粗差</span>？', {
-                    title: ['操作', 'font-size:18px;'],
-                    btn: ['保存粗差', '取消粗差'],
-                    btnAlign: 'c',
-                }, function () {
-                    Message.msg('<span style="color: darkgreen">保存粗差</span>');
-                }, function () {
-                    Message.msg('取消粗差');
-                });
                 _this.svg.dispatch(BrushEvent, { bubbles: false, cancelable: false, detail: { startPosition: startPosition, endPosition: endPosition } });
             }
             else if (_this.state.eventType === TranslationEvent) {
@@ -3099,7 +3299,12 @@ var Chart = (function () {
                 vline.attr({ x1: x + xDeviation, x2: x + xDeviation });
                 if (startPosition) {
                     if (_this.state.eventType === ZoomEvent) {
-                        y = gh;
+                        if (_this.isVerticalDistribution()) {
+                            x = gw;
+                        }
+                        else {
+                            y = gh;
+                        }
                         var sx = startPosition[0], sy = startPosition[1];
                         var w = Math.abs(x - sx);
                         var h = Math.abs(y - sy);
@@ -3192,7 +3397,7 @@ var Chart = (function () {
     };
     Chart.prototype.initOther = function () {
         if (isBrowser) {
-            fetch("/api/image/config").then(function (response) {
+            fetch$1("/api/image/config").then(function (response) {
                 return response.json();
             }).then(function (data) {
                 extend(config, data);
@@ -3215,19 +3420,41 @@ var Chart = (function () {
     };
     Chart.prototype.drawDottedLine = function (num, type) {
         var _a = this.gridComponent.getView(), width = _a.width, height = _a.height;
-        var space = type === 'horizontal' ? height / num : width / num;
-        if (type === 'horizontal') {
-            for (var i = 1; i < num; i++) {
-                var interval = space * i + 0.5;
-                var line = new Line({ y1: interval, y2: interval, x2: width, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5 });
-                this.backgroundComponent.append(line);
+        if (num instanceof Array) {
+            if (type === 'horizontal') {
+                for (var i = 0; i < num.length; i++) {
+                    var n = num[i];
+                    if (i === 0)
+                        n -= 0.5;
+                    var line = new Line({ y1: n, y2: n, x2: width, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5 });
+                    this.backgroundComponent.append(line);
+                }
+            }
+            else if (type === 'vertical') {
+                for (var i = 0; i < num.length; i++) {
+                    var n = num[i];
+                    if (i === 0)
+                        n += 0.5;
+                    var line = new Line({ x1: n, x2: n, y2: height, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5 });
+                    this.backgroundComponent.append(line);
+                }
             }
         }
-        else if (type === 'vertical') {
-            for (var i = 1; i < num; i++) {
-                var interval = space * i + 0.5;
-                var line = new Line({ x1: interval, x2: interval, y2: height, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5 });
-                this.backgroundComponent.append(line);
+        else {
+            var space = type === 'horizontal' ? height / num : width / num;
+            if (type === 'horizontal') {
+                for (var i = 1; i < num; i++) {
+                    var interval = space * i + 0.5;
+                    var line = new Line({ y1: interval, y2: interval, x2: width, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5 });
+                    this.backgroundComponent.append(line);
+                }
+            }
+            else if (type === 'vertical') {
+                for (var i = 1; i < num; i++) {
+                    var interval = space * i + 0.5;
+                    var line = new Line({ x1: interval, x2: interval, y2: height, stroke: 'black', 'stroke-width': 1, "stroke-dasharray": 2, opacity: 0.5 });
+                    this.backgroundComponent.append(line);
+                }
             }
         }
     };
@@ -3296,18 +3523,53 @@ var Chart = (function () {
             }
         }
     };
-    Chart.prototype.reset = function (data) {
+    Chart.prototype.reset = function (data, isRefreshDeleted) {
+        if (isRefreshDeleted === void 0) { isRefreshDeleted = false; }
         if (data === null)
             return this;
         this.action = 'reset';
         this.clear();
         var _a = this, table = _a.table, tableBackup = _a.tableBackup;
-        if (data === undefined)
+        if (data === undefined) {
             data = tableBackup.getData();
+            this.deletedLineMap = {};
+        }
         for (var i = 0; i < data.length; i++) {
             table.insert(data[i]);
         }
-        return this.init();
+        this.init();
+        if (isRefreshDeleted) {
+            for (var _i = 0, _b = Object.values(this.deletedLineMap); _i < _b.length; _i++) {
+                var line = _b[_i];
+                var pointId = line.pointId;
+                var unit = line.unit;
+                var legend = line.legend;
+                this.deleteLine(pointId, unit, legend);
+            }
+        }
+        return this;
+    };
+    Chart.prototype.deleteLine = function (pointId, unit, legend) {
+        var table = this.table;
+        var newData = [];
+        var data = table.getData();
+        for (var i = 0; i < data.length; i++) {
+            var row = data[i];
+            var p = table.field('PointId', row);
+            var u = table.field('Unit', row);
+            var l = table.field('Legend', row);
+            if (p !== pointId || u !== unit || l !== legend) {
+                newData.push(row);
+            }
+        }
+        if (newData.length > 0) {
+            this.reset(newData);
+        }
+    };
+    Chart.prototype.isVerticalDistribution = function () {
+        var clazz = this.constructor.clazz;
+        var isVertical = !this.isHorizontal;
+        return clazz === 'distribution' && isVertical;
     };
     Chart.prototype.outputPreprocessing = function () {
         this.menu.hide();
@@ -3433,7 +3695,7 @@ var Chart = (function () {
         if (this.backgroundImage) {
             url += '?img=' + this.backgroundImage;
         }
-        fetch(url, {
+        fetch$1(url, {
             method: 'POST',
             body: content,
             mode: 'cors',
@@ -3543,7 +3805,7 @@ var Chart = (function () {
         if (this.backgroundImage) {
             url += '&img=' + this.backgroundImage;
         }
-        fetch(url, {
+        fetch$1(url, {
             method: 'POST',
             body: content,
             mode: 'cors',
@@ -3567,7 +3829,7 @@ var Chart = (function () {
         if (this.backgroundImage) {
             url += '&img=' + this.backgroundImage;
         }
-        fetch(url, {
+        fetch$1(url, {
             method: 'POST',
             body: content,
             mode: 'cors',
@@ -4124,31 +4386,36 @@ var LineObject = (function () {
         this.legend = legend;
         this.id = LineObject.id(pointId, unit, legend);
     }
-    LineObject.prototype.draw = function (lineComponent, pointComponent) {
-        this.drawLine(lineComponent);
-        this.drawPoint(pointComponent);
+    LineObject.prototype.draw = function (lineComponent, pointComponent, newLegendObject) {
+        this.drawLine(lineComponent, newLegendObject);
+        this.drawPoint(pointComponent, newLegendObject);
     };
-    LineObject.prototype.drawLine = function (component) {
+    LineObject.prototype.drawLine = function (component, newLegendObject) {
         var _a = this, table = _a.table, xModel = _a.xModel, yModel = _a.yModel, data = _a.data, legendObject = _a.legendObject;
         var xFieldName = xModel.fieldName, xScale = xModel.scale;
         var yFieldName = yModel.fieldName, yScale = yModel.scale;
         if (!data || data.length === 0)
             return;
+        legendObject = newLegendObject || legendObject;
         var lineGenerator = d3.line()
             .x(function (d, index, data) {
             return xScale(table.field(xFieldName, d));
         })
             .y(function (d, index, data) {
             return yScale(table.field(yFieldName, d));
+        })
+            .defined(function (d) {
+            return table.field(xFieldName, d) !== null && table.field(yFieldName, d) !== null;
         });
         component.append(new Path({ d: lineGenerator(data), stroke: legendObject.color, class: 'line' }));
     };
-    LineObject.prototype.drawPoint = function (component) {
+    LineObject.prototype.drawPoint = function (component, newLegendObject) {
         var _a = this, table = _a.table, xModel = _a.xModel, yModel = _a.yModel, data = _a.data, legendObject = _a.legendObject;
         var xFieldName = xModel.fieldName, xScale = xModel.scale;
         var yFieldName = yModel.fieldName, yScale = yModel.scale;
         if (!data || data.length === 0)
             return;
+        legendObject = newLegendObject || legendObject;
         var pointsLength = data.length;
         var pointsSpace = Math.floor(data.length / 10);
         var point, j, x, y;
@@ -4174,6 +4441,26 @@ var LineObject = (function () {
             }
             legendObject.draw(component, xScale(table.field(xFieldName, data[0])), yScale(table.field(yFieldName, data[0])));
             legendObject.draw(component, xScale(table.field(xFieldName, data[pointsLength - 1])), yScale(table.field(yFieldName, data[pointsLength - 1])));
+        }
+    };
+    LineObject.prototype.drawHistogram = function (component, newLegendObject) {
+        var _a = this, table = _a.table, xModel = _a.xModel, yModel = _a.yModel, data = _a.data, legendObject = _a.legendObject;
+        var xFieldName = xModel.fieldName, xScale = xModel.scale;
+        var yFieldName = yModel.fieldName, yScale = yModel.scale;
+        if (!data || data.length === 0)
+            return;
+        legendObject = newLegendObject || legendObject;
+        var yStart = yScale(0);
+        for (var _i = 0, data_1 = data; _i < data_1.length; _i++) {
+            var point = data_1[_i];
+            var xValue = table.field(xFieldName, point);
+            var yValue = table.field(yFieldName, point);
+            if (yValue <= 0)
+                continue;
+            var x = xScale(xValue);
+            var y = yScale(yValue);
+            var line = new Line({ x1: x, y1: yStart, x2: x, y2: y, stroke: legendObject.color, 'stroke-width': 1, class: 'line' });
+            component.append(line);
         }
     };
     LineObject.prototype.generateLegendName = function (tags) {
@@ -4230,7 +4517,8 @@ var Hydrograph = (function (_super) {
                 Unit: 'string',
                 Legend: 'string',
                 SuvDate: 'Date',
-                Value: 'number'
+                Value: 'number',
+                Id: 'string',
             }
         };
         _this.table = _this.db.create(schema);
@@ -4276,7 +4564,8 @@ var Hydrograph = (function (_super) {
                 var point = line.ObservPointList[j];
                 var value = parseFloat(point.Value);
                 var suvDate = parseTime(point.SuvDate);
-                var row = table.insert([pointId, unit, legend, suvDate, value]);
+                var idstr = point.Id;
+                var row = table.insert([pointId, unit, legend, suvDate, value, idstr]);
             }
         }
         this.title = this.data.Title || this.title;
@@ -4286,8 +4575,9 @@ var Hydrograph = (function (_super) {
         this.tableBackup = table.copy(Hydrograph.clazz + '-backup');
     };
     Hydrograph.prototype.initModel = function () {
-        var _a = this.gridComponent.getView(), width = _a.width, height = _a.height;
-        var _b = this, action = _b.action, table = _b.table, pointIdMap = _b.pointIdMap, modelMap = _b.modelMap, lineMap = _b.lineMap, cache = _b.cache, legendManager = _b.legendManager, reverseAxis = _b.reverseAxis, initReverse = _b.initReverse;
+        var _a, _b;
+        var _c = this.gridComponent.getView(), width = _c.width, height = _c.height;
+        var _d = this, action = _d.action, table = _d.table, pointIdMap = _d.pointIdMap, modelMap = _d.modelMap, lineMap = _d.lineMap, cache = _d.cache, legendManager = _d.legendManager, reverseAxis = _d.reverseAxis, initReverse = _d.initReverse;
         if (action === 'reset')
             modelMap[TimeModelName] = new TimeModel(TimeModelName, TimeFieldName, 'horizontal');
         var rows = table.getRows();
@@ -4323,8 +4613,8 @@ var Hydrograph = (function (_super) {
                 cache[key] = [row];
             }
         }
-        for (var _i = 0, _c = Object.values(lineMap); _i < _c.length; _i++) {
-            var line = _c[_i];
+        for (var _i = 0, _e = Object.values(lineMap); _i < _e.length; _i++) {
+            var line = _e[_i];
             var pointId = line.pointId, unit = line.unit, legend = line.legend, id = line.id;
             line.data = table.select("PointId='" + pointId + "' and Unit='" + unit + "' and Legend='" + legend + "' and Value!='-99'");
             line.table = table;
@@ -4334,13 +4624,16 @@ var Hydrograph = (function (_super) {
             if (line.data.length === 0)
                 delete lineMap[id];
         }
-        for (var _d = 0, _e = Object.values(modelMap); _d < _e.length; _d++) {
-            var model = _e[_d];
+        for (var _f = 0, _g = Object.values(modelMap); _f < _g.length; _f++) {
+            var model = _g[_f];
             if (model.name === TimeModelName) {
                 model.data = table.columns(TimeFieldName);
                 model.range = [0, width];
             }
             else {
+                if (((_b = (_a = model) === null || _a === void 0 ? void 0 : _a.name) === null || _b === void 0 ? void 0 : _b.indexOf('降雨')) > -1) {
+                    table.insert([null, model.name, null, null, 0]);
+                }
                 var rowData = table.select("Unit='" + model.name + "'");
                 model.data = table.columns('Value', rowData, function (value) { return value !== -99; });
                 model.range = [height, 0];
@@ -4356,8 +4649,8 @@ var Hydrograph = (function (_super) {
         var lines = Object.values(this.lineMap);
         for (var _i = 0, lines_1 = lines; _i < lines_1.length; _i++) {
             var line = lines_1[_i];
-            var legend = line.legend, legendObject = line.legendObject;
-            legendObject.drawLegend(this.legendsComponent, legend);
+            var pointId = line.pointId, unit = line.unit, legend = line.legend, legendObject = line.legendObject;
+            legendObject.drawLegend(this.legendsComponent, legend, 60, { pointId: pointId, unit: unit, legend: legend });
         }
     };
     Hydrograph.prototype.initXAxis = function () {
@@ -4407,14 +4700,21 @@ var Hydrograph = (function (_super) {
         var _a = this, lineMap = _a.lineMap, linesComponent = _a.linesComponent;
         for (var _i = 0, _b = Object.values(lineMap); _i < _b.length; _i++) {
             var line = _b[_i];
-            line.drawLine(linesComponent);
+            if (line.unit.indexOf('降雨') > -1) {
+                line.drawHistogram(linesComponent);
+            }
+            else {
+                line.drawLine(linesComponent);
+            }
         }
     };
     Hydrograph.prototype.initPoints = function () {
         var _a = this, lineMap = _a.lineMap, pointsComponent = _a.pointsComponent;
         for (var _i = 0, _b = Object.values(lineMap); _i < _b.length; _i++) {
             var line = _b[_i];
-            line.drawPoint(pointsComponent);
+            if (line.unit.indexOf('降雨') === -1) {
+                line.drawPoint(pointsComponent);
+            }
         }
     };
     Hydrograph.prototype.initEvent = function () {
@@ -4505,7 +4805,57 @@ var Hydrograph = (function (_super) {
                 }
             }
             if (brushData.length > 0) {
-                _this.reset(brushData);
+                if (_this.state.keyboard.isShift) {
+                    var idarr = [];
+                    for (var _f = 0, brushData_1 = brushData; _f < brushData_1.length; _f++) {
+                        var point = brushData_1[_f];
+                        var idstr = table.field('Id', point);
+                        idarr.push(idstr);
+                    }
+                    var url_1 = '/business/basic/datamanage/setEignoteByIds';
+                    var body_1 = { ids: idarr.join(','), operation: '' };
+                    var request_1 = { method: 'POST', body: '', credentials: 'include', mode: 'cors' };
+                    layui.layer.confirm('您是否要<span style="color: red">保存粗差</span>？', {
+                        title: ['操作', 'font-size:18px;'],
+                        btn: ['保存粗差', '取消粗差'],
+                        btnAlign: 'c',
+                    }, function (index) {
+                        try {
+                            body_1.operation = 'GrossError';
+                            request_1.body = JSON.stringify(body_1);
+                            fetch(url_1, request_1).then(function (response) {
+                                return response.text();
+                            }).then(function (data) {
+                                console.log(11, data);
+                            }).catch(function (error) {
+                                console.error(12, error);
+                            });
+                        }
+                        catch (e) {
+                            console.error(e);
+                        }
+                        layui.layer.close(index);
+                    }, function (index) {
+                        try {
+                            body_1.operation = 'Normal';
+                            request_1.body = JSON.stringify(body_1);
+                            fetch(url_1, request_1).then(function (response) {
+                                return response.text();
+                            }).then(function (data) {
+                                console.log(21, data);
+                            }).catch(function (error) {
+                                console.error(22, error);
+                            });
+                        }
+                        catch (e) {
+                            console.error(e);
+                        }
+                        layui.layer.close(index);
+                    });
+                }
+                else {
+                    _this.reset(brushData, true);
+                }
             }
         });
         this.svg.on(MouseWheel, function () {
@@ -4545,23 +4895,20 @@ var Hydrograph = (function (_super) {
             if (brushData.length > 0) {
                 brushData.push([null, null, null, minCurrent, null]);
                 brushData.push([null, null, null, maxCurrent, null]);
-                _this.reset(brushData);
+                _this.reset(brushData, true);
             }
         });
         this.svg.on(MouseLeft, function () {
             var _a = d3.event.detail, startPosition = _a.startPosition, endPosition = _a.endPosition;
             var _b = _this, modelMap = _b.modelMap, tableBackup = _b.tableBackup;
+            var time = modelMap['time'];
             var sx = startPosition[0], sy = startPosition[1];
             var ex = endPosition[0], ey = endPosition[1];
-            var time = modelMap['time'];
-            var minLast = time.min.getTime();
-            var maxLast = time.max.getTime();
             var sxValue, exValue;
             sxValue = time.scale.invert(sx);
             exValue = time.scale.invert(ex);
             var time_difference_new = -(exValue - sxValue);
-            var minCurrent = new Date(minLast + time_difference_new);
-            var maxCurrent = new Date(maxLast + time_difference_new);
+            var _c = getTimeDomain(time, time_difference_new), minCurrent = _c[0], maxCurrent = _c[1];
             sxValue = formatTime(minCurrent);
             exValue = formatTime(maxCurrent);
             var brushData = [];
@@ -4575,7 +4922,7 @@ var Hydrograph = (function (_super) {
             if (brushData.length > 0) {
                 brushData.push([null, null, null, minCurrent, null]);
                 brushData.push([null, null, null, maxCurrent, null]);
-                _this.reset(brushData);
+                _this.reset(brushData, true);
             }
         });
     };
@@ -4688,23 +5035,23 @@ var Series = (function (_super) {
         return this;
     };
     Series.prototype.initLines = function () {
-        var _a = this, lineMap = _a.lineMap, modelMap = _a.modelMap, table = _a.table;
-        var scaleX = modelMap.time.scale;
+        var _a = this, lineMap = _a.lineMap, table = _a.table, legendsComponent = _a.legendsComponent;
         var _loop_1 = function (line) {
-            var data = line.data, scaleY = line.model.scale, legend = line.legend;
+            var data = line.data, legendObject = line.legendObject, xScale = line.xModel.scale, yScale = line.yModel.scale;
             var lineGenerator = null;
             if (data.length === 0)
                 return "continue";
-            (function (scaleY) {
+            (function (yScale) {
                 lineGenerator = d3.line()
                     .x(function (d, index, data) {
-                    return scaleX(table.field('SuvDate', d));
+                    return xScale(table.field('SuvDate', d));
                 })
                     .y(function (d, index, data) {
-                    return scaleY(table.field('Val', d));
+                    return yScale(table.field('Val', d));
                 });
-            })(scaleY);
-            this_1.linesComponent.append(new Path({ d: lineGenerator(data), stroke: legend.color, class: 'line' }));
+            })(yScale);
+            this_1.linesComponent.append(new Path({ d: lineGenerator(data), stroke: legendObject.color, class: 'line' }));
+            legendObject.drawLegend(legendsComponent, line.legend);
         };
         var this_1 = this;
         for (var _i = 0, _b = Object.values(lineMap); _i < _b.length; _i++) {
@@ -4714,19 +5061,18 @@ var Series = (function (_super) {
     };
     Series.prototype.initPoints = function () {
         var _a = this, lineMap = _a.lineMap, modelMap = _a.modelMap, table = _a.table;
-        var scaleX = modelMap.time.scale;
         for (var _i = 0, _b = Object.values(lineMap); _i < _b.length; _i++) {
             var line = _b[_i];
-            var data = line.data, scaleY = line.model.scale, legend = line.legend;
+            var data = line.data, legendObject = line.legendObject, xScale = line.xModel.scale, yScale = line.yModel.scale;
             var pointsLength = data.length;
             var pointsSpace = Math.floor(data.length / 10);
             var point = void 0, j = void 0, x = void 0, y = void 0;
             if (pointsLength <= 12) {
                 for (j = 0; j < pointsLength; j++) {
                     point = data[j];
-                    x = scaleX(table.field('SuvDate', point));
-                    y = scaleY(table.field('Val', point));
-                    legend.draw(this.pointsComponent, x, y);
+                    x = xScale(table.field('SuvDate', point));
+                    y = yScale(table.field('Val', point));
+                    legendObject.draw(this.pointsComponent, x, y);
                 }
             }
             else {
@@ -4737,12 +5083,12 @@ var Series = (function (_super) {
                     else {
                         point = data[j * pointsSpace];
                     }
-                    x = scaleX(table.field('SuvDate', point));
-                    y = scaleY(table.field('Val', point));
-                    legend.draw(this.pointsComponent, x, y);
+                    x = xScale(table.field('SuvDate', point));
+                    y = yScale(table.field('Val', point));
+                    legendObject.draw(this.pointsComponent, x, y);
                 }
-                legend.draw(this.pointsComponent, scaleX(table.field('SuvDate', data[0])), scaleY(table.field('Val', data[0])));
-                legend.draw(this.pointsComponent, scaleX(table.field('SuvDate', data[pointsLength - 1])), scaleY(table.field('Val', data[pointsLength - 1])));
+                legendObject.draw(this.pointsComponent, xScale(table.field('SuvDate', data[0])), yScale(table.field('Val', data[0])));
+                legendObject.draw(this.pointsComponent, xScale(table.field('SuvDate', data[pointsLength - 1])), yScale(table.field('Val', data[pointsLength - 1])));
             }
         }
     };
@@ -4750,12 +5096,50 @@ var Series = (function (_super) {
     return Series;
 }(Component));
 
+var LegendIndexNode = (function () {
+    function LegendIndexNode(index, legend) {
+        this.index = [];
+        this.index = __spreadArrays(index);
+        this.legend = legend;
+    }
+    LegendIndexNode.prototype.get = function (key) {
+        if (this.index.indexOf(key) > -1) {
+            return this.legend;
+        }
+        else {
+            return null;
+        }
+    };
+    return LegendIndexNode;
+}());
+var LegendIndex = (function () {
+    function LegendIndex(index) {
+        this.index = [];
+        if (index)
+            this.index = __spreadArrays(index);
+    }
+    LegendIndex.prototype.add = function (node) {
+        this.index.push(node);
+    };
+    LegendIndex.prototype.get = function (key) {
+        for (var _i = 0, _a = this.index; _i < _a.length; _i++) {
+            var node = _a[_i];
+            var legend = node.get(key);
+            if (legend)
+                return legend;
+        }
+        return null;
+    };
+    return LegendIndex;
+}());
+
 var Statistical = (function (_super) {
     __extends(Statistical, _super);
     function Statistical(selector) {
         var _this = _super.call(this, selector) || this;
         _this.pointId = '';
         _this.unit = '';
+        _this.legendIndex = new LegendIndex();
         var schema = {
             name: Statistical.clazz,
             properties: {
@@ -4766,10 +5150,34 @@ var Statistical = (function (_super) {
             }
         };
         _this.table = _this.db.create(schema);
+        _this.legendIndex.add(new LegendIndexNode(['实测值', '残差', '水位分量'], new Legend({
+            name: 'solid_circle',
+            color: 'Blue',
+            generator: d3.symbol().type(d3.symbolCircle),
+            fill: true
+        })));
+        _this.legendIndex.add(new LegendIndexNode(['计算值', '温度分量'], new Legend({
+            name: 'hollow_circle',
+            color: 'Red',
+            generator: d3.symbol().type(d3.symbolCircle),
+            fill: false
+        })));
+        _this.legendIndex.add(new LegendIndexNode(['降雨分量'], new Legend({
+            name: 'solid_rect',
+            color: 'Green',
+            generator: d3.symbol().type(d3.symbolSquare),
+            fill: true
+        })));
+        _this.legendIndex.add(new LegendIndexNode(['时效分量'], new Legend({
+            name: 'hollow_rect',
+            color: 'Black',
+            generator: d3.symbol().type(d3.symbolSquare),
+            fill: false
+        })));
         return _this;
     }
     Statistical.prototype.initData = function () {
-        var _a = this, seriesMap = _a.seriesMap, table = _a.table, modelMap = _a.modelMap, lineMap = _a.lineMap, legendManager = _a.legendManager, data = _a.option.data;
+        var _a = this, seriesMap = _a.seriesMap, table = _a.table, data = _a.option.data;
         this.option.view.height = 750;
         this.option.view.top = 60;
         this.option.view.bottom = 60;
@@ -4806,7 +5214,7 @@ var Statistical = (function (_super) {
         this.tableBackup = table.copy(Statistical.clazz + '-backup');
     };
     Statistical.prototype.initModel = function () {
-        var _a = this, table = _a.table, modelMap = _a.modelMap, seriesMap = _a.seriesMap, unit = _a.unit, gridComponent = _a.gridComponent;
+        var _a = this, table = _a.table, modelMap = _a.modelMap, seriesMap = _a.seriesMap, pointId = _a.pointId, unit = _a.unit, gridComponent = _a.gridComponent;
         var _b = this.gridComponent.getView(), width = _b.width, height = _b.height;
         var _c = this.option.view, w = _c.width, h = _c.height, t = _c.top, b = _c.bottom, l = _c.left, r = _c.right;
         var sw = w - l - r;
@@ -4838,8 +5246,14 @@ var Statistical = (function (_super) {
             for (var j = 0; j < legends.length; j++) {
                 var legendName = legends[j];
                 var data = table.select("PlotId='" + i + "' and Legend='" + legendName + "'");
-                var legend = series.legendManager.add(legendName);
-                series.lineMap[legendName] = { data: data, model: model, legend: legend };
+                var legend = this.legendIndex.get(legendName) || series.legendManager.add(legendName);
+                var lineObject = new LineObject(pointId, unit, legendName);
+                lineObject.data = data;
+                lineObject.table = table;
+                lineObject.legendObject = legend;
+                lineObject.xModel = modelMap[TimeModelName];
+                lineObject.yModel = modelMap[i];
+                series.lineMap[legendName] = lineObject;
             }
         }
     };
@@ -4862,11 +5276,6 @@ var Statistical = (function (_super) {
         }
     };
     Statistical.prototype.initLegend = function () {
-        var seriesMap = this.seriesMap;
-        var seriesArray = Object.values(seriesMap);
-        for (var i = 0; i < seriesArray.length; i++) {
-            seriesArray[i].initLegend();
-        }
     };
     Statistical.prototype.initLines = function () {
         var seriesMap = this.seriesMap;
@@ -4937,11 +5346,12 @@ var OrdinalAxis = (function (_super) {
 
 var OrdinalModel = (function (_super) {
     __extends(OrdinalModel, _super);
-    function OrdinalModel(name, fieldName, type, data) {
+    function OrdinalModel(name, fieldName, type, data, position) {
         if (data === void 0) { data = []; }
         var _this = _super.call(this, name, fieldName, type, data) || this;
         _this.domain = data;
         _this.tickValues = data;
+        _this.position = position;
         return _this;
     }
     OrdinalModel.prototype.init = function () {
@@ -4949,11 +5359,24 @@ var OrdinalModel = (function (_super) {
         if (domain.length !== range.length) {
             var length = Math.abs(range[0] - range[1]);
             var min = d3.min(range) || 0;
+            var max = d3.max(range) || 0;
             var count = domain.length;
-            var space = length / (count - 1);
             range = [];
-            for (var i = 0; i < count; i++) {
-                range.push(min + space * i);
+            if (this.position && this.position.length > 0) {
+                var pos = this.position;
+                var posMax = pos[pos.length - 1] - pos[0];
+                var zoomScale = max / posMax;
+                for (var _i = 0, pos_1 = pos; _i < pos_1.length; _i++) {
+                    var p = pos_1[_i];
+                    p = p - pos[0];
+                    range.push(min + p * zoomScale);
+                }
+            }
+            else {
+                var space = length / (count - 1);
+                for (var i = 0; i < count; i++) {
+                    range.push(min + space * i);
+                }
             }
             this.range = range;
         }
@@ -4972,12 +5395,14 @@ var Distribution = (function (_super) {
         var _this = _super.call(this, selector) || this;
         _this.isHorizontal = true;
         _this.points = [];
+        _this.pointsPosition = [];
         _this.lines = {};
         var schema = {
             name: Distribution.clazz,
             properties: {
                 PointId: 'string',
                 Unit: 'string',
+                Legend: 'string',
                 SuvDate: 'Date',
                 Value: 'number',
                 pointX: 'number',
@@ -5030,17 +5455,26 @@ var Distribution = (function (_super) {
                         valueY = valueY ? parseFloat(valueY) : valueY;
                     }
                 }
-                var row = table.insert([pointId, unit, suvDate, value, pointX, pointY, plotAngle, valueY]);
+                var legend = formatTime(suvDate);
+                var row = table.insert([pointId, unit, legend, suvDate, value, pointX, pointY, plotAngle, valueY]);
             }
         }
-        for (var i = 0, len = usedData.pointCategories.length; i < len; i++) {
-            this.points.push(usedData.pointCategories[i]);
+        if (usedData.pointCategories && usedData.pointCategories.length > 0) {
+            for (var i = 0, len = usedData.pointCategories.length; i < len; i++) {
+                this.points.push(usedData.pointCategories[i]);
+            }
+        }
+        if (usedData.pointPosition && usedData.pointPosition.length > 0) {
+            for (var _i = 0, _b = usedData.pointPosition; _i < _b.length; _i++) {
+                var pos = _b[_i];
+                this.pointsPosition.push(pos);
+            }
         }
         this.title = this.data.title || this.title;
         this.tableBackup = table.copy(Distribution.clazz + '-backup');
     };
     Distribution.prototype.initModel = function () {
-        var _a = this, modelMap = _a.modelMap, lineMap = _a.lineMap, cache = _a.cache, isHorizontal = _a.isHorizontal, points = _a.points, table = _a.table, option = _a.option, reverseAxis = _a.reverseAxis;
+        var _a = this, modelMap = _a.modelMap, lineMap = _a.lineMap, cache = _a.cache, isHorizontal = _a.isHorizontal, points = _a.points, pointsPosition = _a.pointsPosition, table = _a.table, option = _a.option, reverseAxis = _a.reverseAxis;
         var _b = this.gridComponent.getView(), width = _b.width, height = _b.height;
         modelMap[TimeModelName] = new TimeModel(TimeModelName, TimeFieldName, 'horizontal', table.columns('SuvDate'));
         modelMap[TimeModelName].range = isHorizontal ? [0, width] : [0, option.view.width - 200];
@@ -5048,10 +5482,10 @@ var Distribution = (function (_super) {
         var xModel, yModel;
         if (!isHorizontal) {
             xModel = new LinearModel(this.xAxisName, 'Value', 'horizontal', table.columns('Value'));
-            yModel = new OrdinalModel(this.yAxisName, 'PointId', 'vertical', points);
+            yModel = new OrdinalModel(this.yAxisName, 'PointId', 'vertical', points, pointsPosition);
         }
         else {
-            xModel = new OrdinalModel(this.xAxisName, 'PointId', 'horizontal', points);
+            xModel = new OrdinalModel(this.xAxisName, 'PointId', 'horizontal', points, pointsPosition);
             yModel = new LinearModel(this.yAxisName, 'Value', 'vertical', table.columns('Value'));
         }
         modelMap[this.xAxisName] = xModel;
@@ -5083,13 +5517,25 @@ var Distribution = (function (_super) {
             var row = rows[i];
             var suvDate = row.get('SuvDate');
             var niceDate = formatTime(suvDate);
+            var pointId = row.get('PointId');
+            var unit = row.get('Unit');
+            var legend = row.get('Legend');
             if (!lineMap[niceDate]) {
-                lineMap[niceDate] = { data: [row.get()] };
+                var lineObject = new LineObject(pointId, unit, legend);
+                lineObject.data = [row.get()];
+                lineObject.table = table;
+                lineObject.xModel = xModel;
+                lineObject.yModel = yModel;
+                lineMap[niceDate] = lineObject;
             }
             else {
                 lineMap[niceDate].data.push(row.get());
             }
         }
+    };
+    Distribution.prototype.initView = function () {
+        _super.prototype.initView.call(this);
+        this.moveLineComponent = this.gridComponent.append(new Component({ attribute: { class: 'move-line' } }));
     };
     Distribution.prototype.initLegend = function () {
     };
@@ -5115,13 +5561,16 @@ var Distribution = (function (_super) {
         var xAxis;
         if (isHorizontal) {
             xAxis = new OrdinalAxis({ model: xAxisModel, type: "axisBottom" }).setView({ width: width, height: 20 });
+            this.drawDottedLine(xAxisModel.range, 'vertical');
         }
         else {
             xAxis = new LinearAxis({ model: xAxisModel, type: "axisBottom" }).setView({ width: width, height: 20 });
+            this.drawDottedLine(xAxisModel.tickValues.length - 1, 'vertical');
         }
+        var timeAxisView = timeAxis.getView();
+        this.bottomComponent.append(new Rect({ x: timeAxisView.x, width: timeAxisView.width, height: timeAxisView.height, class: 'bottom-rect', fill: 'white' }).setView({}));
         this.bottomComponent.append(xAxis);
         this.bottomComponent.append(timeAxis);
-        this.drawDottedLine(xAxisModel.tickValues.length - 1, 'vertical');
     };
     Distribution.prototype.initYAxis = function () {
         var isHorizontal = this.isHorizontal;
@@ -5131,12 +5580,13 @@ var Distribution = (function (_super) {
         var yAxisModel = this.modelMap[this.yAxisName];
         if (isHorizontal) {
             yAxis = new LinearAxis({ model: yAxisModel, type: "axisLeft" }).setView({ x: width, y: -0.5, height: height });
+            this.drawDottedLine(yAxisModel.tickValues.length - 1, 'horizontal');
         }
         else {
             yAxis = new OrdinalAxis({ model: yAxisModel, type: "axisLeft" }).setView({ x: width, y: -0.5, height: height });
+            this.drawDottedLine(yAxisModel.range, 'horizontal');
         }
         this.leftComponent.append(yAxis);
-        this.drawDottedLine(yAxisModel.tickValues.length - 1, 'horizontal');
     };
     Distribution.prototype.initLines = function () {
         var _a = this, lineMap = _a.lineMap, legendManager = _a.legendManager;
@@ -5147,8 +5597,7 @@ var Distribution = (function (_super) {
             for (var i = 0; i < len; i++) {
                 var time = lineKeys[i];
                 var lineObj = lineMap[time];
-                lineObj.time = time;
-                lineObj.legend = legendManager.add(time);
+                lineObj.legendObject = legendManager.add(time);
                 this.drawLineClick(lineObj);
                 this.drawLegendClick(lineObj);
                 if (!this.data.dataYList)
@@ -5163,7 +5612,7 @@ var Distribution = (function (_super) {
     Distribution.prototype.drawLineClick = function (line) {
         var _a = this, modelMap = _a.modelMap, table = _a.table;
         var points = line.data;
-        var legend = line.legend;
+        var legend = line.legendObject;
         var isHorizontal = this.isHorizontal;
         var scaleX = modelMap[this.xAxisName].scale;
         var scaleY = modelMap[this.yAxisName].scale;
@@ -5195,7 +5644,7 @@ var Distribution = (function (_super) {
     Distribution.prototype.drawPointClick = function (line) {
         var _a = this, modelMap = _a.modelMap, table = _a.table;
         var points = line.data;
-        var legend = line.legend;
+        var legend = line.legendObject;
         var isHorizontal = this.isHorizontal;
         var scaleX = modelMap[this.xAxisName].scale;
         var scaleY = modelMap[this.yAxisName].scale;
@@ -5210,8 +5659,8 @@ var Distribution = (function (_super) {
         }
     };
     Distribution.prototype.drawLegendClick = function (line) {
-        var time = line.time, legend = line.legend;
-        legend.drawLegend(this.legendsComponent, time.substr(0, 10));
+        var pointId = line.pointId, unit = line.unit, legend = line.legend, legendObject = line.legendObject;
+        legendObject.drawLegend(this.legendsComponent, legend.substr(0, 10), 60, { pointId: pointId, unit: unit, legend: legend });
     };
     Distribution.prototype.onClickTime = function (time) {
         var _a = this, legendManager = _a.legendManager, lineMap = _a.lineMap, lines = _a.lines, isHorizontal = _a.isHorizontal, cache = _a.cache, table = _a.table;
@@ -5221,8 +5670,7 @@ var Distribution = (function (_super) {
         if (size > 0) {
             console.log('onClickTime:', time);
             var lineObj = lineMap[time];
-            lineObj.time = time;
-            lineObj.legend = legendManager.add(time);
+            lineObj.legendObject = legendManager.add(time);
             this.drawLineClick(lineObj);
             this.drawLegendClick(lineObj);
             if (!this.data.dataYList)
@@ -5252,6 +5700,55 @@ var Distribution = (function (_super) {
     Distribution.prototype.initEvent = function () {
         var _this = this;
         _super.prototype.initEvent.call(this);
+        var bottomView = this.bottomComponent.getView();
+        var vline = new Line({ y1: -(bottomView.height - 75), y2: -bottomView.height, stroke: 'red', 'stroke-width': 2 }).setView({});
+        this.bottomComponent.append(vline).hide();
+        vline.on('click', function (datum, index, groups) {
+            d3.event.preventDefault();
+            var mouse = d3.mouse(groups[index]);
+            var x = mouse[0], y = mouse[1];
+            if (!_this.isHorizontal) {
+                x += 200;
+            }
+            console.log(x);
+            var line = _this.queryTimeLine(x);
+            if (line) {
+                _this.onClickTime(line.legend);
+                _this.clearMoveLine();
+            }
+        });
+        this.bottomComponent.on('mouseenter', function () {
+            d3.event.preventDefault();
+            vline.show();
+        });
+        this.bottomComponent.on('mouseleave', function () {
+            d3.event.preventDefault();
+            vline.hide();
+            setTimeout(function () { return _this.clearMoveLine(); }, 100);
+        });
+        var timerMouseMoveEvent;
+        this.bottomComponent.on('mousemove', function (datum, index, groups) {
+            d3.event.preventDefault();
+            var mouse = d3.mouse(groups[index]);
+            var x = mouse[0], y = mouse[1];
+            x = x - bottomView.left;
+            vline.attr({ x1: x, x2: x });
+            if (!_this.isHorizontal) {
+                x += 200;
+            }
+            clearTimeout(timerMouseMoveEvent);
+            timerMouseMoveEvent = setTimeout(function () {
+                var line = _this.queryTimeLine(x);
+                if (line) {
+                    console.log('move-line:', line.legend);
+                    _this.clearMoveLine();
+                    _this.showMoveLine(line);
+                }
+                else {
+                    _this.clearMoveLine();
+                }
+            }, 100);
+        });
         this.svg.on(TooltipsEvent, function (datum, index, groups) {
             var _a = d3.event.detail, mouse = _a.mouse, tooltips = _a.target;
             var _b = _this, table = _b.table, cache = _b.cache, modelMap = _b.modelMap, legendManager = _b.legendManager, parentView = _b.option.view, xAxisName = _b.xAxisName, isHorizontal = _b.isHorizontal;
@@ -5315,6 +5812,57 @@ var Distribution = (function (_super) {
     Distribution.prototype.clear = function () {
         _super.prototype.clear.call(this);
         this.lines = [];
+    };
+    Distribution.prototype.queryTimeLine = function (xCoordinate) {
+        var timeModel = this.modelMap['time'];
+        var timeScale = timeModel.scale;
+        var xValue = timeScale.invert(xCoordinate);
+        var timeTempArray = [];
+        var timeIndex = Object.keys(this.lineMap);
+        for (var _i = 0, timeIndex_1 = timeIndex; _i < timeIndex_1.length; _i++) {
+            var timeStr = timeIndex_1[_i];
+            var time = parseTime(timeStr);
+            if (time) {
+                var timeDifference = Math.abs(time.getTime() - xValue.getTime());
+                if (timeDifference < day * 7) {
+                    timeTempArray.push([time, timeDifference]);
+                }
+            }
+        }
+        var timeSelected;
+        if (timeTempArray.length > 0) {
+            timeSelected = timeTempArray[0];
+            if (timeTempArray.length > 1) {
+                for (var i = 1; i < timeTempArray.length; i++) {
+                    if (timeSelected[1] > timeTempArray[i][1]) {
+                        timeSelected = timeTempArray[i];
+                    }
+                }
+            }
+        }
+        if (timeSelected) {
+            var time = formatTime(timeSelected[0]);
+            var line = this.lineMap[time];
+            if (line) {
+                return line;
+            }
+        }
+        else {
+            console.log('timeEvent:current:not-find:', formatTime(xValue));
+        }
+        return null;
+    };
+    Distribution.prototype.showMoveLine = function (line) {
+        var legendObject = new Legend({
+            name: 'solid_star',
+            color: 'Red',
+            generator: d3.symbol().type(d3.symbolStar),
+            fill: true
+        });
+        line.draw(this.moveLineComponent, this.moveLineComponent, legendObject);
+    };
+    Distribution.prototype.clearMoveLine = function () {
+        d3.select(this.selector).select(".move-line").selectAll("*").remove();
     };
     Distribution.clazz = "distribution";
     Distribution.title = "分布图";
@@ -5392,6 +5940,7 @@ var DistributionBackground = (function (_super) {
             boxOrient: "horizontal"
         });
         this.topComponent.append(this.legendsComponent);
+        this.moveLineComponent = this.gridComponent.append(new Component({ attribute: { class: 'move-line' } }));
     };
     DistributionBackground.prototype.initBackground = function () {
     };
@@ -5446,16 +5995,20 @@ var DistributionBackground = (function (_super) {
             }
         });
         timeAxis.setView({ width: width, height: 80, boxOrient: "vertical" });
+        var timeAxisView = timeAxis.getView();
+        this.bottomComponent.append(new Rect({ x: timeAxisView.x, width: timeAxisView.width, height: timeAxisView.height, class: 'bottom-rect', fill: 'white' }).setView({}));
         this.bottomComponent.append(timeAxis);
     };
     DistributionBackground.prototype.initYAxis = function () {
     };
     DistributionBackground.prototype.initEvent = function () {
+        _super.prototype.initEvent.call(this);
     };
-    DistributionBackground.prototype.drawLineClick = function (line) {
+    DistributionBackground.prototype.drawLineClick = function (line, targetComponent, newLegendObject) {
+        targetComponent = targetComponent || this.linesComponent;
         var _a = this, modelMap = _a.modelMap, table = _a.table, left = _a.option.view.left;
         var points = line.data;
-        var legend = line.legend;
+        var legend = newLegendObject || line.legendObject;
         var scaleX = modelMap[this.xAxisName].scale;
         var scaleY = modelMap[this.yAxisName].scale;
         var lineGenerator = d3.line()
@@ -5479,7 +6032,7 @@ var DistributionBackground = (function (_super) {
                         pointsGroup.push(points[j]);
                     }
                     groupPointLength = count;
-                    this.linesComponent.append(new Path({
+                    targetComponent.append(new Path({
                         d: lineGenerator(pointsGroup),
                         stroke: legend.color,
                         'stroke-width': 1,
@@ -5489,14 +6042,15 @@ var DistributionBackground = (function (_super) {
                 }
             }
             else {
-                this.linesComponent.append(new Path({ d: lineGenerator(points), stroke: legend.color, 'stroke-width': 1, fill: 'none', class: 'line' }));
+                targetComponent.append(new Path({ d: lineGenerator(points), stroke: legend.color, 'stroke-width': 1, fill: 'none', class: 'line' }));
             }
         }
     };
-    DistributionBackground.prototype.drawPointClick = function (line) {
+    DistributionBackground.prototype.drawPointClick = function (line, targetComponent, newLegendObject) {
+        targetComponent = targetComponent || this.linesComponent;
         var _a = this, modelMap = _a.modelMap, table = _a.table, left = _a.option.view.left;
         var points = line.data;
-        var legend = line.legend;
+        var legend = newLegendObject || line.legendObject;
         var scaleX = modelMap[this.xAxisName].scale;
         var scaleY = modelMap[this.yAxisName].scale;
         for (var i = 0, len = points.length; i < len; i++) {
@@ -5512,13 +6066,51 @@ var DistributionBackground = (function (_super) {
             var y1 = scaleY(point);
             var x2 = pointX * this.zoom - left;
             var y2 = pointY * this.zoom;
-            this.linesComponent.append(new Line({ x1: x1, y1: y1, x2: x2, y2: y2, stroke: legend.color, class: 'line' }));
+            targetComponent.append(new Line({ x1: x1, y1: y1, x2: x2, y2: y2, stroke: legend.color, class: 'line' }));
         }
+    };
+    DistributionBackground.prototype.showMoveLine = function (line) {
+        var legendObject = new Legend({
+            name: 'solid_star',
+            color: 'Red',
+            generator: d3.symbol().type(d3.symbolStar),
+            fill: true
+        });
+        this.drawLineClick(line, this.moveLineComponent, legendObject);
+        if (!this.data.dataYList)
+            this.drawPointClick(line, this.moveLineComponent, legendObject);
     };
     DistributionBackground.clazz = "distribution-background";
     DistributionBackground.title = "带背景分布图";
     return DistributionBackground;
 }(Distribution));
+
+function bubbleSort(data, fun) {
+    for (var i = data.length; i > 0; i--) {
+        var moveFlag = false;
+        for (var j = 0; j < i - 1; j++) {
+            if (fun) {
+                if (fun(data[j], data[j + 1])) {
+                    var temp = data[j];
+                    data[j] = data[j + 1];
+                    data[j + 1] = temp;
+                    moveFlag = true;
+                }
+            }
+            else {
+                if (data[j] > data[j + 1]) {
+                    var temp = data[j];
+                    data[j] = data[j + 1];
+                    data[j + 1] = temp;
+                    moveFlag = true;
+                }
+            }
+        }
+        if (!moveFlag)
+            break;
+    }
+    return data;
+}
 
 var Correlation = (function (_super) {
     __extends(Correlation, _super);
@@ -5533,9 +6125,18 @@ var Correlation = (function (_super) {
             }
         };
         _this.table = _this.db.create(schema);
+        _this.state.menuStatus['直线相关拟合线'] = false;
+        _this.state.menuStatus['多项式相关拟合线'] = false;
+        _this.state.menuStatus['分年连线'] = false;
+        _this.state.menuStatus['包络图'] = false;
+        _this.state.menuStatus['标记数据点'] = true;
         return _this;
     }
     Correlation.prototype.initData = function () {
+        this.option.view.width = 900;
+        this.option.view.height = 700;
+        this.option.view.left = 200;
+        this.option.view.right = 200;
         var _a = this, action = _a.action, table = _a.table, modelMap = _a.modelMap, lineMap = _a.lineMap, legendManager = _a.legendManager, data = _a.option.data;
         this.data = clone(data && data.designcode ? data : data.object);
         var usedData = this.data;
@@ -5600,12 +6201,232 @@ var Correlation = (function (_super) {
         this.drawDottedLine(yAxisModel.tickValues.length - 1, 'horizontal');
     };
     Correlation.prototype.initLegend = function () {
-        var legendManager = this.legendManager;
-        legendManager.add('scatter').drawLegend(this.legendsComponent, '实测值');
     };
     Correlation.prototype.initLines = function () {
     };
     Correlation.prototype.initPoints = function () {
+        this.reloadHistory();
+    };
+    Correlation.prototype.initMenu = function () {
+        _super.prototype.initMenu.call(this);
+        var self = this;
+        var _a = this, rootMenu = _a.menu, state = _a.state;
+        rootMenu.append(new MenuSeparator());
+        rootMenu.append(new MenuItem({
+            text: '直线相关拟合线',
+            type: this.state.menuStatus['直线相关拟合线'] ? 'check' : 'normal',
+            action: function () {
+                var menuType = '直线相关拟合线';
+                console.log(menuType, !state.menuStatus[menuType]);
+                state.menuStatus[menuType] = !state.menuStatus[menuType];
+                self.reset();
+            }
+        }));
+        rootMenu.append(new MenuItem({
+            text: '多项式相关拟合线',
+            type: this.state.menuStatus['多项式相关拟合线'] ? 'check' : 'normal',
+            action: function () {
+                var menuType = '多项式相关拟合线';
+                console.log(menuType, !state.menuStatus[menuType]);
+                state.menuStatus[menuType] = !state.menuStatus[menuType];
+                self.reset();
+            }
+        }));
+        rootMenu.append(new MenuItem({
+            text: '分年连线',
+            type: this.state.menuStatus['分年连线'] ? 'check' : 'normal',
+            action: function () {
+                var menuType = '分年连线';
+                console.log(menuType, !state.menuStatus[menuType]);
+                state.menuStatus[menuType] = !state.menuStatus[menuType];
+                self.reset();
+            }
+        }));
+        rootMenu.append(new MenuItem({
+            text: '包络图',
+            type: this.state.menuStatus['包络图'] ? 'check' : 'normal',
+            action: function () {
+                var menuType = '包络图';
+                console.log(menuType, !state.menuStatus[menuType]);
+                state.menuStatus[menuType] = !state.menuStatus[menuType];
+                state.menuStatus['标记数据点'] = !state.menuStatus[menuType];
+                self.reset();
+            }
+        }));
+        rootMenu.append(new MenuItem({
+            text: '标记数据点',
+            type: this.state.menuStatus['标记数据点'] ? 'check' : 'normal',
+            action: function () {
+                var menuType = '标记数据点';
+                console.log(menuType, !state.menuStatus[menuType]);
+                state.menuStatus[menuType] = !state.menuStatus[menuType];
+                self.reset();
+            }
+        }));
+    };
+    Correlation.prototype.drawLinearCorrelationFitLine = function () {
+        var _a = this, data = _a.data, legendManager = _a.legendManager, legendsComponent = _a.legendsComponent, linesComponent = _a.linesComponent, modelMap = _a.modelMap, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName;
+        var scaleX = modelMap[xAxisName].scale;
+        var scaleY = modelMap[yAxisName].scale;
+        var lineGenerator = d3.line()
+            .x(function (d) {
+            return scaleX(parseFloat(d.valueX));
+        })
+            .y(function (d) {
+            return scaleY(parseFloat(d.valueY));
+        });
+        var pointsLine = data.lineDataList;
+        var typeLine = 'line';
+        legendManager.add(typeLine).drawLegend(legendsComponent, '直线相关拟合线');
+        var legendLine = legendManager.get(typeLine);
+        if (pointsLine && pointsLine.length > 0) {
+            linesComponent.append(new Path({
+                d: lineGenerator(pointsLine),
+                fill: 'none',
+                stroke: legendLine.color,
+                'stroke-width': 1,
+                class: 'line'
+            }));
+        }
+    };
+    Correlation.prototype.drawPolynomialCorrelationFitLine = function () {
+        var _a = this, data = _a.data, legendManager = _a.legendManager, legendsComponent = _a.legendsComponent, linesComponent = _a.linesComponent, modelMap = _a.modelMap, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName;
+        var scaleX = modelMap[xAxisName].scale;
+        var scaleY = modelMap[yAxisName].scale;
+        var lineGenerator = d3.line()
+            .x(function (d) {
+            return scaleX(parseFloat(d.valueX));
+        })
+            .y(function (d) {
+            return scaleY(parseFloat(d.valueY));
+        });
+        var pointsPolynomial = data.polynomialDataList;
+        var typePolynomial = 'polynomial';
+        legendManager.add(typePolynomial).drawLegend(legendsComponent, '多项式相关拟合线');
+        var legendPolynomial = legendManager.get(typePolynomial);
+        if (pointsPolynomial && pointsPolynomial.length > 0) {
+            linesComponent.append(new Path({
+                d: lineGenerator(pointsPolynomial),
+                fill: 'none',
+                stroke: legendPolynomial.color,
+                'stroke-width': 1,
+                class: 'line'
+            }));
+        }
+    };
+    Correlation.prototype.drawYearLine = function () {
+        var yearLine = [];
+        var yearLineMap = {};
+        var scatterDataList = this.data.scatterDataList;
+        for (var _i = 0, scatterDataList_1 = scatterDataList; _i < scatterDataList_1.length; _i++) {
+            var item = scatterDataList_1[_i];
+            var keyYear = item.suvDateX.substring(0, 4);
+            if (yearLineMap[keyYear]) {
+                yearLineMap[keyYear].push(item);
+            }
+            else {
+                yearLineMap[keyYear] = [item];
+                yearLine.push([keyYear, yearLineMap[keyYear]]);
+            }
+        }
+        for (var _a = 0, yearLine_1 = yearLine; _a < yearLine_1.length; _a++) {
+            var item = yearLine_1[_a];
+            bubbleSort(item[1], function (a, b) {
+                return a.suvDateX > b.suvDateX;
+            });
+        }
+        bubbleSort(yearLine, function (a, b) {
+            return a[0] > b[0];
+        });
+        var lastPoint = null;
+        for (var _b = 0, yearLine_2 = yearLine; _b < yearLine_2.length; _b++) {
+            var subarray = yearLine_2[_b];
+            var currentPoints = subarray[1];
+            if (lastPoint) {
+                currentPoints.unshift(lastPoint);
+            }
+            lastPoint = currentPoints[currentPoints.length - 1];
+            this.drawPath(subarray[1], subarray[0]);
+        }
+    };
+    Correlation.prototype.drawEnvelopeChart = function () {
+        var _a = this, modelMap = _a.modelMap, data = _a.data, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName;
+        var scaleX = modelMap[xAxisName].scale;
+        var scaleY = modelMap[yAxisName].scale;
+        var scatterDataList = data.scatterDataList;
+        var points = [];
+        var historyData = [];
+        var currentYearData = [];
+        var inCurrentYearData = [];
+        var outCurrentYearData = [];
+        var year = new Date().getFullYear().toString();
+        for (var _i = 0, scatterDataList_2 = scatterDataList; _i < scatterDataList_2.length; _i++) {
+            var item = scatterDataList_2[_i];
+            var keyYear = item.suvDateX.substring(0, 4);
+            if (keyYear === year) {
+                currentYearData.push(item);
+            }
+            else {
+                historyData.push(item);
+            }
+        }
+        for (var i = 0, len = historyData.length; i < len; i++) {
+            var item = historyData[i];
+            var valueX = scaleX(parseFloat(item.valueX));
+            var valueY = scaleY(parseFloat(item.valueY));
+            points.push([valueX, valueY]);
+        }
+        var pointsConvexHull = d3.polygonHull(points);
+        if (pointsConvexHull && pointsConvexHull.length > 0) {
+            var color = '#FF9966';
+            var lineGenerator = d3.line()
+                .x(function (d) {
+                return (d[0]);
+            })
+                .y(function (d) {
+                return (d[1]);
+            });
+            this.pointsComponent.append(new Path({
+                d: lineGenerator(pointsConvexHull),
+                fill: color,
+                stroke: color,
+                'stroke-width': 1,
+                'fill-opacity': 0.5,
+            }));
+            for (var _b = 0, currentYearData_1 = currentYearData; _b < currentYearData_1.length; _b++) {
+                var item = currentYearData_1[_b];
+                var flag = d3.polygonContains(pointsConvexHull, [scaleX(parseFloat(item.valueX)), scaleY(parseFloat(item.valueY))]);
+                if (flag) {
+                    inCurrentYearData.push(item);
+                }
+                else {
+                    outCurrentYearData.push(item);
+                }
+            }
+        }
+        var historyLegendObject = new Legend({
+            name: 'solid_circle',
+            color: '#C0C0C0',
+            generator: d3.symbol().type(d3.symbolCircle),
+            fill: true
+        });
+        this.drawPoint(historyData, historyLegendObject);
+        var inCurrentLegendObject = new Legend({
+            name: 'solid_circle',
+            color: 'red',
+            generator: d3.symbol().type(d3.symbolCircle),
+            fill: true
+        });
+        this.drawPoint(inCurrentYearData, inCurrentLegendObject);
+        var outCurrentLegendObject = new Legend({
+            name: 'solid_star',
+            color: 'red',
+            generator: d3.symbol().type(d3.symbolStar),
+            fill: true
+        });
+        this.drawPoint(outCurrentYearData, outCurrentLegendObject);
+    };
+    Correlation.prototype.drawScatterPoint = function () {
         var _a = this, modelMap = _a.modelMap, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName, legendManager = _a.legendManager;
         var data = this.data.scatterDataList;
         var type = 'scatter';
@@ -5628,11 +6449,23 @@ var Correlation = (function (_super) {
             }));
         }
     };
-    Correlation.prototype.initMenu = function () {
-        _super.prototype.initMenu.call(this);
-        var self = this;
-        var _a = this, rootMenu = _a.menu, modelMap = _a.modelMap, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName, state = _a.state;
-        var _b = this, linesComponent = _b.linesComponent, legendsComponent = _b.legendsComponent, legendManager = _b.legendManager, data = _b.data;
+    Correlation.prototype.reloadHistory = function () {
+        var menuStatus = this.state.menuStatus;
+        if (menuStatus['标记数据点']) {
+            this.legendManager.add('scatter').drawLegend(this.legendsComponent, '实测值');
+            this.drawScatterPoint();
+        }
+        if (menuStatus['直线相关拟合线'])
+            this.drawLinearCorrelationFitLine();
+        if (menuStatus['多项式相关拟合线'])
+            this.drawPolynomialCorrelationFitLine();
+        if (menuStatus['分年连线'])
+            this.drawYearLine();
+        if (menuStatus['包络图'])
+            this.drawEnvelopeChart();
+    };
+    Correlation.prototype.drawPath = function (data, legend) {
+        var _a = this, legendManager = _a.legendManager, legendsComponent = _a.legendsComponent, linesComponent = _a.linesComponent, modelMap = _a.modelMap, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName;
         var scaleX = modelMap[xAxisName].scale;
         var scaleY = modelMap[yAxisName].scale;
         var lineGenerator = d3.line()
@@ -5642,96 +6475,44 @@ var Correlation = (function (_super) {
             .y(function (d) {
             return scaleY(parseFloat(d.valueY));
         });
-        rootMenu.append(new MenuSeparator());
-        rootMenu.append(new MenuItem({
-            text: '直线相关拟合线',
-            type: this.state.menuStatus['直线相关拟合线'] ? 'check' : 'normal',
-            action: function () {
-                var menuType = '直线相关拟合线';
-                console.log(menuType);
-                var flag = state.menuStatus[menuType];
-                if (flag) {
-                    state.menuStatus[menuType] = false;
-                }
-                else {
-                    state.menuStatus[menuType] = true;
-                }
-                var pointsLine = data.lineDataList;
-                var typeLine = 'line';
-                legendManager.add(typeLine).drawLegend(legendsComponent, '直线相关拟合线');
-                var legendLine = legendManager.get(typeLine);
-                if (pointsLine && pointsLine.length > 0) {
-                    linesComponent.append(new Path({
-                        d: lineGenerator(pointsLine),
-                        fill: 'none',
-                        stroke: legendLine.color,
-                        'stroke-width': 1,
-                        class: 'line'
-                    }));
-                }
+        var points = data;
+        var type = legend;
+        legendManager.add(type).drawLegend(legendsComponent, type);
+        var legendObject = legendManager.get(type);
+        if (points && points.length > 0) {
+            linesComponent.append(new Path({
+                d: lineGenerator(points),
+                fill: 'none',
+                stroke: legendObject.color,
+                'stroke-width': 1,
+                class: 'line'
+            }));
+        }
+    };
+    Correlation.prototype.drawPoint = function (data, legendObject) {
+        var _a = this, modelMap = _a.modelMap, xAxisName = _a.xAxisName, yAxisName = _a.yAxisName;
+        var scaleX = modelMap[xAxisName].scale;
+        var scaleY = modelMap[yAxisName].scale;
+        for (var i = 0, len = data.length; i < len; i++) {
+            var valueX = data[i].valueX;
+            var valueY = data[i].valueY;
+            var x = scaleX(parseFloat(valueX));
+            var y = scaleY(parseFloat(valueY));
+            if (legendObject.name.indexOf('circle') > -1) {
+                this.pointsComponent.append(new Circle({
+                    cx: x,
+                    cy: y,
+                    r: 3,
+                    fill: legendObject.color,
+                    stroke: 'orange',
+                    "stroke-width": 0,
+                    class: 'point',
+                }));
             }
-        }));
-        rootMenu.append(new MenuItem({
-            text: '多项式相关拟合线',
-            type: 'check',
-            action: function () {
-                console.log("多项式相关拟合线");
-                var pointsPolynomial = data.polynomialDataList;
-                var typePolynomial = 'polynomial';
-                legendManager.add(typePolynomial).drawLegend(legendsComponent, '多项式相关拟合线');
-                var legendPolynomial = legendManager.get(typePolynomial);
-                if (pointsPolynomial && pointsPolynomial.length > 0) {
-                    linesComponent.append(new Path({
-                        d: lineGenerator(pointsPolynomial),
-                        fill: 'none',
-                        stroke: legendPolynomial.color,
-                        'stroke-width': 1,
-                        class: 'line'
-                    }));
-                }
+            else {
+                legendObject.draw(this.pointsComponent, x, y, 30);
             }
-        }));
-        rootMenu.append(new MenuItem({
-            text: '分年连线',
-            action: function () {
-                console.log("分年连线");
-            }
-        }));
-        rootMenu.append(new MenuItem({
-            text: '包络图',
-            action: function () {
-                console.log("包络图");
-                var modelMap = self.modelMap, data = self.data, xAxisName = self.xAxisName, yAxisName = self.yAxisName;
-                var scaleX = modelMap[xAxisName].scale;
-                var scaleY = modelMap[yAxisName].scale;
-                var scatterDataList = data.scatterDataList;
-                var points = [];
-                for (var i = 0, len = scatterDataList.length; i < len; i++) {
-                    var item = scatterDataList[i];
-                    var valueX = scaleX(parseFloat(item.valueX));
-                    var valueY = scaleY(parseFloat(item.valueY));
-                    points.push([valueX, valueY]);
-                }
-                var pointsConvexHull = d3.polygonHull(points);
-                var lineGenerator = d3.line()
-                    .x(function (d) {
-                    return (d[0]);
-                })
-                    .y(function (d) {
-                    return (d[1]);
-                });
-                if (pointsConvexHull && pointsConvexHull.length > 0) {
-                    var color = '#FF9966';
-                    self.pointsComponent.append(new Path({
-                        d: lineGenerator(pointsConvexHull),
-                        fill: color,
-                        stroke: color,
-                        'stroke-width': 1,
-                        'fill-opacity': 0.5,
-                    }));
-                }
-            }
-        }));
+        }
     };
     Correlation.clazz = "correlation";
     Correlation.title = "相关图";
