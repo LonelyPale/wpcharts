@@ -4809,9 +4809,17 @@ var _wpcharts = (function (exports, d3) {
                             var idstr = table.field('Id', point);
                             idarr.push(idstr);
                         }
-                        var url_1 = '/business/basic/datamanage/setEignoteByIds';
+                        var url_1 = 'http://119.57.135.180:9090/business/basic/datamanage/setEignoteByIds';
                         var body_1 = { ids: idarr.join(','), operation: '' };
-                        var request_1 = { method: 'POST', body: '', credentials: 'include', mode: 'cors' };
+                        var request_1 = {
+                            method: 'POST',
+                            body: '',
+                            credentials: 'include',
+                            mode: 'cors',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                        };
                         layui.layer.confirm('您是否要<span style="color: red">保存粗差</span>？', {
                             title: ['操作', 'font-size:18px;'],
                             btn: ['保存粗差', '取消粗差'],
@@ -4819,7 +4827,7 @@ var _wpcharts = (function (exports, d3) {
                         }, function (index) {
                             try {
                                 body_1.operation = 'GrossError';
-                                request_1.body = JSON.stringify(body_1);
+                                request_1.body = formurlencoded(body_1);
                                 fetch(url_1, request_1).then(function (response) {
                                     return response.text();
                                 }).then(function (data) {
@@ -4831,7 +4839,9 @@ var _wpcharts = (function (exports, d3) {
                             catch (e) {
                                 console.error(e);
                             }
-                            layui.layer.close(index);
+                            finally {
+                                layui.layer.close(index);
+                            }
                         }, function (index) {
                             try {
                                 body_1.operation = 'Normal';
@@ -4847,7 +4857,9 @@ var _wpcharts = (function (exports, d3) {
                             catch (e) {
                                 console.error(e);
                             }
-                            layui.layer.close(index);
+                            finally {
+                                layui.layer.close(index);
+                            }
                         });
                     }
                     else {

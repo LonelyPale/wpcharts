@@ -13,3 +13,9 @@ new
 5、分布图 x 轴值实际绘制
 6、点击线张合
 7、降雨量柱状图
+
+你看一下149的环境：http://119.57.135.180:9999/loginpage
+Administrator
+nsBd201909sKy06
+md5: ece6dd0b612625088b6b2c4caaa576d6
+

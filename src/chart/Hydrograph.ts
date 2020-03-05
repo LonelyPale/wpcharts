@@ -17,6 +17,7 @@ import {LineObject, LineObjectTag} from "../object/LineObject";
 import {TimeModelName, TimeFieldName} from "../constant";
 import {Message} from "../ui/Message";
 import {config} from "../config";
+import {formurlencoded} from "../util/utils";
 
 export class Hydrograph extends Chart {
 
@@ -374,7 +375,15 @@ export class Hydrograph extends Chart {
                     }
                     let url = '/business/basic/datamanage/setEignoteByIds';
                     let body = {ids: idarr.join(','), operation: ''};
-                    let request: RequestInit = {method: 'POST', body: '', credentials: 'include', mode: 'cors'};
+                    let request: RequestInit = {
+                        method: 'POST',
+                        body: '',
+                        credentials: 'include',
+                        mode: 'cors',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                    };
 
                     layui.layer.confirm('您是否要<span style="color: red">保存粗差</span>？', {
                         title: ['操作', 'font-size:18px;'],
@@ -384,7 +393,7 @@ export class Hydrograph extends Chart {
                         try {
                             //Message.msg('<span style="color: darkgreen">保存粗差</span>');
                             body.operation = 'GrossError';
-                            request.body = JSON.stringify(body);
+                            request.body = formurlencoded(body);
                             fetch(url, request).then(function (response: Response) {
                                 return response.text();
                             }).then(function (data: any) {
@@ -394,14 +403,15 @@ export class Hydrograph extends Chart {
                             });
                         } catch (e) {
                             console.error(e);
+                        } finally {
+                            layui.layer.close(index);
                         }
-                        layui.layer.close(index);
                     }, function (index: number) {
                         //Message.msg('取消粗差');
                         try {
                             //Message.msg('<span style="color: darkgreen">保存粗差</span>');
                             body.operation = 'Normal';
-                            request.body = JSON.stringify(body);
+                            request.body = formurlencoded(body);
                             fetch(url, request).then(function (response: Response) {
                                 return response.text();
                             }).then(function (data: any) {
@@ -411,8 +421,9 @@ export class Hydrograph extends Chart {
                             });
                         } catch (e) {
                             console.error(e);
+                        } finally {
+                            layui.layer.close(index);
                         }
-                        layui.layer.close(index);
                     });
                 } else {
                     this.reset(brushData, true);
