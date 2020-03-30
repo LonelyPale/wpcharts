@@ -116,7 +116,7 @@ export class Menu extends Component {
         //显示或隐藏图例的菜单项：删除线
         for (let menuItem of Object.values(this.children)) {
             if (menuItem instanceof MenuItem) {
-                if(menuItem.property.text === '删除线') {
+                if(menuItem.property.text === '删除线' || menuItem.property.text === '设置线') {
                     if(isDelete) {
                         menuItem.event = this.event;
                         menuItem.show();

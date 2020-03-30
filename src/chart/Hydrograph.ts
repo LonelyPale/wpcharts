@@ -373,16 +373,18 @@ export class Hydrograph extends Chart {
                         let idstr = table.field('Id', point);
                         idarr.push(idstr);
                     }
+                    //let url = 'http://119.57.135.180:9090/business/basic/datamanage/setEignoteByIds';
                     let url = '/business/basic/datamanage/setEignoteByIds';
                     let body = {ids: idarr.join(','), operation: ''};
                     let request: RequestInit = {
                         method: 'POST',
-                        body: '',
                         credentials: 'include',
                         mode: 'cors',
+                        //mode: 'no-cors',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'
                         },
+                        body: '',
                     };
 
                     layui.layer.confirm('您是否要<span style="color: red">保存粗差</span>？', {
@@ -391,15 +393,20 @@ export class Hydrograph extends Chart {
                         btnAlign: 'c',
                     }, function (index: number) {
                         try {
-                            //Message.msg('<span style="color: darkgreen">保存粗差</span>');
                             body.operation = 'GrossError';
                             request.body = formurlencoded(body);
                             fetch(url, request).then(function (response: Response) {
                                 return response.text();
                             }).then(function (data: any) {
-                                console.log(11, data);
+                                if(data) {
+                                    let result = JSON.parse(data);
+                                    Message.msg(`<span style="color: white">${result.message}</span>`);
+                                } else {
+                                    Message.msg('数据已提交');
+                                }
+                                console.log('setEignoteByIds:', data);
                             }).catch(function (error: any) {
-                                console.error(12, error);
+                                console.error('error-setEignoteByIds:', error);
                             });
                         } catch (e) {
                             console.error(e);
@@ -407,17 +414,21 @@ export class Hydrograph extends Chart {
                             layui.layer.close(index);
                         }
                     }, function (index: number) {
-                        //Message.msg('取消粗差');
                         try {
-                            //Message.msg('<span style="color: darkgreen">保存粗差</span>');
                             body.operation = 'Normal';
                             request.body = formurlencoded(body);
                             fetch(url, request).then(function (response: Response) {
                                 return response.text();
                             }).then(function (data: any) {
-                                console.log(21, data);
+                                if(data) {
+                                    let result = JSON.parse(data);
+                                    Message.msg(`<span style="color: white">${result.message}</span>`);
+                                } else {
+                                    Message.msg('数据已提交');
+                                }
+                                console.log('setEignoteByIds:', data);
                             }).catch(function (error: any) {
-                                console.error(22, error);
+                                console.error('error-setEignoteByIds:', error);
                             });
                         } catch (e) {
                             console.error(e);

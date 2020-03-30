@@ -29,6 +29,8 @@ import {LineObject} from "../object/LineObject";
 import {after, before} from "../aop/decorators";
 import {concat} from "../util/url";
 import {Message} from "../ui/Message";
+import {LineSet} from "../object/LineSet";
+import {LegendIndex} from "../component/legend/LegendIndex";
 
 export type ActionType = 'all' | 'reset' | 'add';
 
@@ -67,7 +69,9 @@ export interface IOption {
 }
 
 export interface IChart {
-    setOption(option: IOption, callbacks?: () => {}): IChart;
+    svg: Svg;
+
+    setOption(option: IOption, callbacks?: () => void): Promise<IChart>;
 
     outputSvg(callbacks?: (() => {})[]): string;
 }
@@ -159,7 +163,9 @@ export abstract class Chart implements IChart {
     pointIdMap: { [key: string]: number } = {}; //测点
     modelMap: { [key: string]: Model<number | string | Date> } = {}; //物理量
     lineMap: { [key: string]: LineObject } = {}; //线
-    legendManager: LegendManager = new LegendManager(); //图例
+
+    legendIndex: LegendIndex = LegendIndex.initDefault(); //已设置的图例样式
+    legendManager: LegendManager = new LegendManager(this.legendIndex); //图例管理
 
     deletedLineMap: { [key: string]: LineObject } = {}; //已删除的线
 
@@ -199,7 +205,7 @@ export abstract class Chart implements IChart {
         //console.log(`wpcharts:${constructor.clazz}:`, this);
     }
 
-    public setOption(option: IOption, callbacks?: () => {}): IChart {
+    public async setOption(option: IOption, callbacks?: () => void): Promise<IChart> {
         this.option = extend(this.option, option);
         this.action = this.option.action || this.action;
 
@@ -209,6 +215,21 @@ export abstract class Chart implements IChart {
         if (url) {
             if (typeof body === 'object') {
                 this.option.request.body = formurlencoded(body);
+            }
+
+            //获取服务器颜色配置
+            if(this.isHydrograph() || this.isDistribution()) {
+
+            } else {
+
+            }
+            try {
+                let response = await fetch('/business/graph/getColor?gratype=hydrograph');
+                let data = await response.json();
+                let colorSet = JSON.parse(data.setjson);
+                console.log(colorSet);
+            } catch(e) {
+                console.log(e);
             }
 
             fetch(url, <RequestInit>request).then(function (response: Response) {
@@ -402,29 +423,87 @@ export abstract class Chart implements IChart {
             action(menuItem: MenuItem) {
                 console.log("删除 Line:", menuItem);
                 let path = menuItem.event.path;
-                for(let item of path) {
-                    //let attrNode = item.attributes.getNamedItem("pointId");
-                    //let type = attrNode ? attrNode.value : '';
-                    //if(item.attributes && item.attributes.pointId) {}
+                let lineInfo = self.findLineInfo(path);
+                if(lineInfo && lineInfo.pointId) {
+                    let {pointId, unit, legend} = lineInfo;
+                    let id = pointId + '-' + unit + '-' + legend;
+                    self.deletedLineMap[id] = self.lineMap[id];
 
-                    if(item.getAttribute && item.getAttribute("pointId")) {
-                        let pointId = item.getAttribute("pointId");
-                        let unit = item.getAttribute("unit");
-                        let legend = item.getAttribute("legend");
-
-                        let id = pointId + '-' + unit + '-' + legend;
-                        self.deletedLineMap[id] = self.lineMap[id];
-
-                        console.log('删除:', id);
-                        self.deleteLine(pointId, unit, legend);
-                    }
+                    console.log('删除:', id);
+                    self.deleteLine(pointId, unit, legend);
                 }
             }
         });
 
         rootMenu.append(new MenuSeparator());
-        rootMenu.append(deleteChartMenuItem);
         rootMenu.append(deleteLineMenuItem);
+        rootMenu.append(deleteChartMenuItem);
+
+        let setLineMenuItem = new MenuItem({
+            text: '设置线',
+            action(menuItem: MenuItem) {
+                let id: string = self.svg.id();
+                console.log("设置线", id);
+
+                let path = menuItem.event.path;
+                let lineInfo = self.findLineInfo(path);
+                if(lineInfo && lineInfo.pointId) {
+                    let {pointId, unit, legend} = lineInfo;
+                    let parameter = '';
+                    parameter += 'id=' + id + '&';
+                    parameter += 'pointId=' + pointId + '&';
+                    parameter += 'unit=' + unit + '&';
+                    parameter += 'legend=' + legend + '&';
+                    layui.layer.open({
+                        type: 2,
+                        title: `设置线 - ${legend}`,
+                        shadeClose: true,
+                        shade: [0.5, '#393D49'],
+                        maxmin: false, //开启最大化最小化按钮
+                        area: ['600px', '500px'],
+                        content: '/wpcharts/dist/html/setLine.html?' + parameter,
+                    });
+                }
+
+            }
+        });
+
+        let setChartMenuItem = new MenuItem({
+            text: '设置图',
+            action() {
+                let id: string = self.svg.id();
+                console.log("设置图", id);
+                layui.layer.open({
+                    type: 2,
+                    title: '设置图',
+                    shadeClose: true,
+                    shade: [0.5, '#393D49'],
+                    maxmin: false, //开启最大化最小化按钮
+                    area: ['800px', '600px'],
+                    content: '/wpcharts/dist/html/set.html?id=' + id,
+                });
+            }
+        });
+
+        let helpMenuItem = new MenuItem({
+            text: '帮助',
+            action() {
+                console.log("帮助");
+                layui.layer.open({
+                    type: 2,
+                    area: ['550px', '250px'],
+                    shadeClose: true,
+                    title: '帮助 - 操作说明',
+                    content: '/wpcharts/dist/html/help.html',
+                });
+            }
+        });
+
+        rootMenu.append(new MenuSeparator());
+        rootMenu.append(setLineMenuItem);
+        rootMenu.append(setChartMenuItem);
+        rootMenu.append(new MenuSeparator());
+        rootMenu.append(helpMenuItem);
 
         if (config.debug) {
             // 键盘控制
@@ -897,7 +976,7 @@ export abstract class Chart implements IChart {
         this.pointIdMap = {};
         this.modelMap = {};
         this.lineMap = {};
-        this.legendManager = new LegendManager();
+        this.legendManager = new LegendManager(this.legendIndex);
         this.table.delete();
     }
 
@@ -976,7 +1055,10 @@ export abstract class Chart implements IChart {
                         name: 'commonlyLegend',
                         color: warnColor[i],
                         generator: d3.symbol().type(d3.symbolStar),
-                        fill: false
+                        fill: false,
+                        width: 1,
+                        style: 'style1',
+                        legend: 'symbolStarHollow'
                     });
 
                     let commonlyNode = d3.select(`${selector} .commonly-legend`);
@@ -991,7 +1073,10 @@ export abstract class Chart implements IChart {
                         name: 'seriousLegend',
                         color: warnColor[i],
                         generator: d3.symbol().type(d3.symbolStar),
-                        fill: false
+                        fill: false,
+                        width: 1,
+                        style: 'style1',
+                        legend: 'symbolStarHollow'
                     });
 
                     let seriousNode = d3.select(`${selector} .serious-legend`);
@@ -1074,12 +1159,46 @@ export abstract class Chart implements IChart {
         }
     }
 
+    public findLineInfo(path: any): any {
+        for(let item of path) {
+            //let attrNode = item.attributes.getNamedItem("pointId");
+            //let type = attrNode ? attrNode.value : '';
+            //if(item.attributes && item.attributes.pointId) {}
+
+            if(item.getAttribute && item.getAttribute("pointId")) {
+                let pointId = item.getAttribute("pointId");
+                let unit = item.getAttribute("unit");
+                let legend = item.getAttribute("legend");
+                return {pointId, unit, legend};
+            }
+        }
+        return null;
+    }
+
+    public getChartType(): string {
+        return (<ChartConstructor>this.constructor).clazz;
+    }
+
+    //是否过程线
+    public isHydrograph(): boolean {
+        return this.getChartType() === 'hydrograph';
+    }
+
+    //是否分布图
+    public isDistribution(): boolean {
+        return this.getChartType() === 'distribution';
+    }
+
     //是否垂直分布图
     public isVerticalDistribution(): boolean {
         let clazz = (<ChartConstructor>this.constructor).clazz;
         // @ts-ignore
         let isVertical = !this.isHorizontal;
         return clazz === 'distribution' && isVertical;
+    }
+
+    public set(key: string) {
+        console.log(111, key);
     }
 
     outputPreprocessing() {

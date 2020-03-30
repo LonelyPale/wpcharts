@@ -206,6 +206,8 @@ var wpcharts = (function (exports) {
     function finish() {
         ready.init = window._wpcharts.init;
         ready.config = window._wpcharts.config;
+        ready.instance = window._wpcharts.instance;
+        ready.getInstance = window._wpcharts.getInstance;
         for (var i = 0; i < hookCallbacks.length; i++) {
             var callback = hookCallbacks[i];
             callback && callback.call(window);

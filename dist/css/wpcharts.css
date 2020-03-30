@@ -46,6 +46,9 @@ node sharp 不能正确处理 CSS 派生选择器，所以只能使用单独的 
 .legend-4 {}
 .legend-5 {}
 
+/*help*/
+.help-title {color: green}
+
 /*
 .menu text{fill: black;}
 

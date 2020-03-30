@@ -1228,7 +1228,7 @@ var _wpcharts = (function (exports, d3) {
             for (var _i = 0, _a = Object.values(this.children); _i < _a.length; _i++) {
                 var menuItem = _a[_i];
                 if (menuItem instanceof MenuItem) {
-                    if (menuItem.property.text === '删除线') {
+                    if (menuItem.property.text === '删除线' || menuItem.property.text === '设置线') {
                         if (isDelete) {
                             menuItem.event = this.event;
                             menuItem.show();
@@ -2506,16 +2506,81 @@ var _wpcharts = (function (exports, d3) {
         return Rdb;
     }());
 
+    var LegendManager = (function () {
+        function LegendManager(legendIndex) {
+            this.legends = [];
+            this.legendsMap = {};
+            this.LegendSizeMax = 12;
+            this.usedLegends = {};
+            this.unusedLegends = [];
+            this.legendIndex = legendIndex;
+            for (var i = 0; i < this.LegendSizeMax; i++) {
+                var legendIndexNode = legendIndex.index[i];
+                var legend = legendIndexNode.legend;
+                this.legends.push(legend);
+                this.legendsMap[legend.name] = legend;
+                this.unusedLegends.push(legend);
+            }
+        }
+        LegendManager.prototype.add = function (key) {
+            var unusedLegends = this.unusedLegends;
+            if (unusedLegends.length > 0) {
+                var legend = unusedLegends.shift();
+                this.usedLegends[key] = legend;
+                return legend;
+            }
+            else {
+                var usedArray = Object.values(this.usedLegends);
+                return usedArray[usedArray.length - 1];
+            }
+        };
+        LegendManager.prototype.remove = function (key) {
+            var legend = this.usedLegends[key];
+            if (!legend) {
+                return this.legends[0];
+            }
+            this.unusedLegends.push(legend);
+            delete this.usedLegends[key];
+            return legend;
+        };
+        LegendManager.prototype.get = function (key) {
+            return this.usedLegends[key];
+        };
+        LegendManager.prototype.getSize = function () {
+            return this.unusedLegends.length;
+        };
+        return LegendManager;
+    }());
+
+    var Style = (function (_super) {
+        __extends(Style, _super);
+        function Style(attribute) {
+            return _super.call(this, attribute) || this;
+        }
+        Style.TagName = 'style';
+        return Style;
+    }(SvgObject));
+
+    var BrushEvent = 'BrushEvent';
+    var TooltipsEvent = 'TooltipsEvent';
+    var ZoomEvent = 'ZoomEvent';
+    var TranslationEvent = 'TranslationEvent';
+    var MouseWheel = 'MouseWheel';
+    var MouseLeft = 'MouseLeft';
+
     var Legend = (function () {
-        function Legend(legend) {
-            var name = legend.name, color = legend.color, generator = legend.generator, fill = legend.fill, attribute = legend.attribute, clazz = legend.clazz;
+        function Legend(legendAttribute) {
+            var name = legendAttribute.name, generator = legendAttribute.generator, fill = legendAttribute.fill, attribute = legendAttribute.attribute, clazz = legendAttribute.clazz, color = legendAttribute.color, width = legendAttribute.width, style = legendAttribute.style, legend = legendAttribute.legend;
             this.name = name;
-            this.color = color;
             this.generator = generator;
             this.fill = fill;
             this.attribute = attribute || {};
             if (clazz)
                 this.clazz = clazz;
+            this.color = color || '#000000';
+            this.width = width || 1;
+            this.style = style || 'style1';
+            this.legend = legend || 'symbolCircleSolid';
             this.attribute['d'] = this.generator.size(Legend.DefaultLegendSize)();
             if (this.fill) {
                 this.attribute['fill'] = this.color;
@@ -2564,145 +2629,6 @@ var _wpcharts = (function (exports, d3) {
         Legend.DefaultStrokeWidth = 1;
         return Legend;
     }());
-
-    var LegendManager = (function () {
-        function LegendManager() {
-            this.usedLegends = {};
-            this.unusedLegends = [];
-            for (var i = 0; i < LegendManager.legends.length; i++) {
-                var legend = LegendManager.legends[i];
-                this.unusedLegends.push(legend);
-            }
-        }
-        LegendManager.prototype.add = function (key) {
-            var unusedLegends = this.unusedLegends;
-            if (unusedLegends.length > 0) {
-                var legend = unusedLegends.shift();
-                this.usedLegends[key] = legend;
-                return legend;
-            }
-            else {
-                var usedArray = Object.values(this.usedLegends);
-                return usedArray[usedArray.length - 1];
-            }
-        };
-        LegendManager.prototype.remove = function (key) {
-            var legend = this.usedLegends[key];
-            if (!legend) {
-                return LegendManager.legends[0];
-            }
-            this.unusedLegends.push(legend);
-            delete this.usedLegends[key];
-            return legend;
-        };
-        LegendManager.prototype.get = function (key) {
-            return this.usedLegends[key];
-        };
-        LegendManager.prototype.getSize = function () {
-            return this.unusedLegends.length;
-        };
-        LegendManager.init = function () {
-            LegendManager.legends.push(new Legend({
-                name: 'solid_circle',
-                color: 'Blue',
-                generator: d3.symbol().type(d3.symbolCircle),
-                fill: true
-            }));
-            LegendManager.legends.push(new Legend({
-                name: 'hollow_circle',
-                color: '#996600',
-                generator: d3.symbol().type(d3.symbolCircle),
-                fill: false
-            }));
-            LegendManager.legends.push(new Legend({
-                name: 'solid_rect',
-                color: 'Cyan',
-                generator: d3.symbol().type(d3.symbolSquare),
-                fill: true
-            }));
-            LegendManager.legends.push(new Legend({
-                name: 'hollow_rect',
-                color: '#6600FF',
-                generator: d3.symbol().type(d3.symbolSquare),
-                fill: false
-            }));
-            LegendManager.legends.push(new Legend({
-                name: 'solid_triangle',
-                color: 'Green',
-                generator: d3.symbol().type(d3.symbolTriangle),
-                fill: true
-            }));
-            LegendManager.legends.push(new Legend({
-                name: 'hollow_triangle',
-                color: 'Purple',
-                generator: d3.symbol().type(d3.symbolTriangle),
-                fill: false
-            }));
-            LegendManager.legends.push(new Legend({
-                name: 'solid_inverted_triangle',
-                color: 'LightBlue',
-                generator: d3.symbol().type(d3.symbolTriangle),
-                fill: true,
-                attribute: { transform: 'rotate(180)' }
-            }));
-            LegendManager.legends.push(new Legend({
-                name: 'hollow_inverted_triangle',
-                color: '#9999FF',
-                generator: d3.symbol().type(d3.symbolTriangle),
-                fill: false,
-                attribute: { transform: 'rotate(180)' }
-            }));
-            LegendManager.legends.push(new Legend({
-                name: 'solid_rhombus',
-                color: 'SeaGreen',
-                generator: d3.symbol().type(d3.symbolDiamond),
-                fill: true
-            }));
-            LegendManager.legends.push(new Legend({
-                name: 'hollow_rhombus',
-                color: 'Yellow',
-                generator: d3.symbol().type(d3.symbolDiamond),
-                fill: false
-            }));
-            LegendManager.legends.push(new Legend({
-                name: 'solid_cross',
-                color: 'DarkCyan',
-                generator: d3.symbol().type(d3.symbolCross),
-                fill: true
-            }));
-            LegendManager.legends.push(new Legend({
-                name: 'hollow_cross',
-                color: 'DarkGoldenRod',
-                generator: d3.symbol().type(d3.symbolCross),
-                fill: false
-            }));
-            for (var i = 0; i < LegendManager.legends.length; i++) {
-                var legend = LegendManager.legends[i];
-                LegendManager.legendsMap[legend.name] = legend;
-            }
-        };
-        LegendManager.legends = [];
-        LegendManager.legendsMap = {};
-        LegendManager.LegendSizeMax = 12;
-        return LegendManager;
-    }());
-    LegendManager.init();
-
-    var Style = (function (_super) {
-        __extends(Style, _super);
-        function Style(attribute) {
-            return _super.call(this, attribute) || this;
-        }
-        Style.TagName = 'style';
-        return Style;
-    }(SvgObject));
-
-    var BrushEvent = 'BrushEvent';
-    var TooltipsEvent = 'TooltipsEvent';
-    var ZoomEvent = 'ZoomEvent';
-    var TranslationEvent = 'TranslationEvent';
-    var MouseWheel = 'MouseWheel';
-    var MouseLeft = 'MouseLeft';
 
     function before(fun) {
         return function (target, propertyKey, descriptor) {
@@ -2781,6 +2707,198 @@ var _wpcharts = (function (exports, d3) {
         return Message;
     }());
 
+    var LegendIndexNode = (function () {
+        function LegendIndexNode(index, legend) {
+            this.index = [];
+            this.index = __spreadArrays(index);
+            this.legend = legend;
+        }
+        LegendIndexNode.prototype.get = function (key) {
+            if (this.index.indexOf(key) > -1) {
+                return this.legend;
+            }
+            else {
+                return null;
+            }
+        };
+        return LegendIndexNode;
+    }());
+    var LegendIndex = (function () {
+        function LegendIndex(index) {
+            this.index = [];
+            if (index)
+                this.index = __spreadArrays(index);
+        }
+        LegendIndex.prototype.add = function (node) {
+            this.index.push(node);
+        };
+        LegendIndex.prototype.get = function (key) {
+            if (typeof key === 'string') {
+                for (var _i = 0, _a = this.index; _i < _a.length; _i++) {
+                    var node = _a[_i];
+                    var legend = node.get(key);
+                    if (legend)
+                        return legend;
+                }
+            }
+            else {
+                return this.index[key].legend;
+            }
+            return null;
+        };
+        LegendIndex.initDefault = function () {
+            var legendIndex = new LegendIndex();
+            legendIndex.add(new LegendIndexNode(['symbolCircleSolid', 'solid_circle'], new Legend({
+                name: 'solid_circle',
+                color: 'Blue',
+                generator: d3.symbol().type(d3.symbolCircle),
+                fill: true,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolCircleSolid'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolCircleHollow', 'hollow_circle'], new Legend({
+                name: 'hollow_circle',
+                color: '#996600',
+                generator: d3.symbol().type(d3.symbolCircle),
+                fill: false,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolCircleHollow'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolSquareSolid', 'solid_rect'], new Legend({
+                name: 'solid_rect',
+                color: 'Cyan',
+                generator: d3.symbol().type(d3.symbolSquare),
+                fill: true,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolSquareSolid'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolSquareHollow', 'hollow_rect'], new Legend({
+                name: 'hollow_rect',
+                color: '#6600FF',
+                generator: d3.symbol().type(d3.symbolSquare),
+                fill: false,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolSquareHollow'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolTriangleSolid', 'solid_triangle'], new Legend({
+                name: 'solid_triangle',
+                color: 'Green',
+                generator: d3.symbol().type(d3.symbolTriangle),
+                fill: true,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolTriangleSolid'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolTriangleHollow', 'hollow_triangle'], new Legend({
+                name: 'hollow_triangle',
+                color: 'Purple',
+                generator: d3.symbol().type(d3.symbolTriangle),
+                fill: false,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolTriangleHollow'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolTriangleSolidInverted', 'solid_inverted_triangle'], new Legend({
+                name: 'solid_inverted_triangle',
+                color: 'LightBlue',
+                generator: d3.symbol().type(d3.symbolTriangle),
+                fill: true,
+                attribute: { transform: 'rotate(180)' },
+                width: 1,
+                style: 'style1',
+                legend: 'symbolTriangleSolidInverted'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolTriangleHollowInverted', 'hollow_inverted_triangle'], new Legend({
+                name: 'hollow_inverted_triangle',
+                color: '#9999FF',
+                generator: d3.symbol().type(d3.symbolTriangle),
+                fill: false,
+                attribute: { transform: 'rotate(180)' },
+                width: 1,
+                style: 'style1',
+                legend: 'symbolTriangleHollowInverted'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolDiamondSolid', 'solid_rhombus'], new Legend({
+                name: 'solid_rhombus',
+                color: 'SeaGreen',
+                generator: d3.symbol().type(d3.symbolDiamond),
+                fill: true,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolDiamondSolid'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolDiamondHollow', 'hollow_rhombus'], new Legend({
+                name: 'hollow_rhombus',
+                color: 'Yellow',
+                generator: d3.symbol().type(d3.symbolDiamond),
+                fill: false,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolDiamondHollow'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolCrossSolid', 'solid_cross'], new Legend({
+                name: 'solid_cross',
+                color: 'DarkCyan',
+                generator: d3.symbol().type(d3.symbolCross),
+                fill: true,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolCrossSolid'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolCrossHollow', 'hollow_cross'], new Legend({
+                name: 'hollow_cross',
+                color: 'DarkGoldenRod',
+                generator: d3.symbol().type(d3.symbolCross),
+                fill: false,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolCrossHollow'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolStarSolid', 'solid_star'], new Legend({
+                name: 'solid_star',
+                color: '#FF00FF',
+                generator: d3.symbol().type(d3.symbolStar),
+                fill: true,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolStarSolid'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolStarHollow', 'hollow_star'], new Legend({
+                name: 'hollow_star',
+                color: '#00FF00',
+                generator: d3.symbol().type(d3.symbolStar),
+                fill: false,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolStarHollow'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolWyeSolid', 'solid_wye'], new Legend({
+                name: 'solid_wye',
+                color: '#00FF00',
+                generator: d3.symbol().type(d3.symbolWye),
+                fill: true,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolWyeSolid'
+            })));
+            legendIndex.add(new LegendIndexNode(['symbolWyeHollow', 'hollow_wye'], new Legend({
+                name: 'hollow_wye',
+                color: '#FAEBD7',
+                generator: d3.symbol().type(d3.symbolWye),
+                fill: false,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolWyeHollow'
+            })));
+            return legendIndex;
+        };
+        return LegendIndex;
+    }());
+
     var defaultOption = {
         type: '',
         action: 'all',
@@ -2828,7 +2946,8 @@ var _wpcharts = (function (exports, d3) {
             this.pointIdMap = {};
             this.modelMap = {};
             this.lineMap = {};
-            this.legendManager = new LegendManager();
+            this.legendIndex = LegendIndex.initDefault();
+            this.legendManager = new LegendManager(this.legendIndex);
             this.deletedLineMap = {};
             this.seriesMap = {};
             this.backgroundImage = '';
@@ -2839,46 +2958,74 @@ var _wpcharts = (function (exports, d3) {
             this.title = this.constructor.title || '';
         }
         Chart.prototype.setOption = function (option, callbacks) {
-            this.option = extend(this.option, option);
-            this.action = this.option.action || this.action;
-            var self = this;
-            var _a = this.option, url = _a.url, request = _a.request, body = _a.request.body;
-            if (url) {
-                if (typeof body === 'object') {
-                    this.option.request.body = formurlencoded(body);
-                }
-                fetch$1(url, request).then(function (response) {
-                    try {
-                        return response.json();
-                    }
-                    catch (e) {
-                        return response.text().then(function (data) {
-                            return new Promise(function (resolve, reject) {
+            return __awaiter(this, void 0, Promise, function () {
+                var self, _a, url, request, body, response, data, colorSet, e_1;
+                return __generator(this, function (_b) {
+                    switch (_b.label) {
+                        case 0:
+                            this.option = extend(this.option, option);
+                            this.action = this.option.action || this.action;
+                            self = this;
+                            _a = this.option, url = _a.url, request = _a.request, body = _a.request.body;
+                            if (!url) return [3, 6];
+                            if (typeof body === 'object') {
+                                this.option.request.body = formurlencoded(body);
+                            }
+                            if (this.isHydrograph() || this.isDistribution()) ;
+                            _b.label = 1;
+                        case 1:
+                            _b.trys.push([1, 4, , 5]);
+                            return [4, fetch$1('/business/graph/getColor?gratype=hydrograph')];
+                        case 2:
+                            response = _b.sent();
+                            return [4, response.json()];
+                        case 3:
+                            data = _b.sent();
+                            colorSet = JSON.parse(data.setjson);
+                            console.log(colorSet);
+                            return [3, 5];
+                        case 4:
+                            e_1 = _b.sent();
+                            console.log(e_1);
+                            return [3, 5];
+                        case 5:
+                            fetch$1(url, request).then(function (response) {
                                 try {
-                                    resolve(JSON.parse(data));
+                                    return response.json();
                                 }
                                 catch (e) {
-                                    reject(e);
-                                    console.log('text:', data);
+                                    return response.text().then(function (data) {
+                                        return new Promise(function (resolve, reject) {
+                                            try {
+                                                resolve(JSON.parse(data));
+                                            }
+                                            catch (e) {
+                                                reject(e);
+                                                console.log('text:', data);
+                                            }
+                                        });
+                                    });
                                 }
+                            }).then(function (data) {
+                                self.option.data = data;
+                                self.init();
+                                if (callbacks && typeof callbacks === "function")
+                                    callbacks();
+                            }).catch(function (error) {
+                                console.error(error);
                             });
-                        });
+                            return [3, 7];
+                        case 6:
+                            if (this.option.data) {
+                                this.init();
+                                if (callbacks && typeof callbacks === "function")
+                                    callbacks();
+                            }
+                            _b.label = 7;
+                        case 7: return [2, this];
                     }
-                }).then(function (data) {
-                    self.option.data = data;
-                    self.init();
-                    if (callbacks && typeof callbacks === "function")
-                        callbacks();
-                }).catch(function (error) {
-                    console.error(error);
                 });
-            }
-            else if (this.option.data) {
-                this.init();
-                if (callbacks && typeof callbacks === "function")
-                    callbacks();
-            }
-            return this;
+            });
         };
         Chart.prototype.init = function () {
             if (this.action !== 'reset')
@@ -3011,23 +3158,79 @@ var _wpcharts = (function (exports, d3) {
                 action: function (menuItem) {
                     console.log("删除 Line:", menuItem);
                     var path = menuItem.event.path;
-                    for (var _i = 0, path_1 = path; _i < path_1.length; _i++) {
-                        var item = path_1[_i];
-                        if (item.getAttribute && item.getAttribute("pointId")) {
-                            var pointId = item.getAttribute("pointId");
-                            var unit = item.getAttribute("unit");
-                            var legend = item.getAttribute("legend");
-                            var id = pointId + '-' + unit + '-' + legend;
-                            self.deletedLineMap[id] = self.lineMap[id];
-                            console.log('删除:', id);
-                            self.deleteLine(pointId, unit, legend);
-                        }
+                    var lineInfo = self.findLineInfo(path);
+                    if (lineInfo && lineInfo.pointId) {
+                        var pointId = lineInfo.pointId, unit = lineInfo.unit, legend = lineInfo.legend;
+                        var id = pointId + '-' + unit + '-' + legend;
+                        self.deletedLineMap[id] = self.lineMap[id];
+                        console.log('删除:', id);
+                        self.deleteLine(pointId, unit, legend);
                     }
                 }
             });
             rootMenu.append(new MenuSeparator());
-            rootMenu.append(deleteChartMenuItem);
             rootMenu.append(deleteLineMenuItem);
+            rootMenu.append(deleteChartMenuItem);
+            var setLineMenuItem = new MenuItem({
+                text: '设置线',
+                action: function (menuItem) {
+                    var id = self.svg.id();
+                    console.log("设置线", id);
+                    var path = menuItem.event.path;
+                    var lineInfo = self.findLineInfo(path);
+                    if (lineInfo && lineInfo.pointId) {
+                        var pointId = lineInfo.pointId, unit = lineInfo.unit, legend = lineInfo.legend;
+                        var parameter = '';
+                        parameter += 'id=' + id + '&';
+                        parameter += 'pointId=' + pointId + '&';
+                        parameter += 'unit=' + unit + '&';
+                        parameter += 'legend=' + legend + '&';
+                        layui.layer.open({
+                            type: 2,
+                            title: "\u8BBE\u7F6E\u7EBF - " + legend,
+                            shadeClose: true,
+                            shade: [0.5, '#393D49'],
+                            maxmin: false,
+                            area: ['600px', '500px'],
+                            content: '/wpcharts/dist/html/setLine.html?' + parameter,
+                        });
+                    }
+                }
+            });
+            var setChartMenuItem = new MenuItem({
+                text: '设置图',
+                action: function () {
+                    var id = self.svg.id();
+                    console.log("设置图", id);
+                    layui.layer.open({
+                        type: 2,
+                        title: '设置图',
+                        shadeClose: true,
+                        shade: [0.5, '#393D49'],
+                        maxmin: false,
+                        area: ['800px', '600px'],
+                        content: '/wpcharts/dist/html/set.html?id=' + id,
+                    });
+                }
+            });
+            var helpMenuItem = new MenuItem({
+                text: '帮助',
+                action: function () {
+                    console.log("帮助");
+                    layui.layer.open({
+                        type: 2,
+                        area: ['550px', '250px'],
+                        shadeClose: true,
+                        title: '帮助 - 操作说明',
+                        content: '/wpcharts/dist/html/help.html',
+                    });
+                }
+            });
+            rootMenu.append(new MenuSeparator());
+            rootMenu.append(setLineMenuItem);
+            rootMenu.append(setChartMenuItem);
+            rootMenu.append(new MenuSeparator());
+            rootMenu.append(helpMenuItem);
             if (config.debug) {
                 var keyEvent = (function () {
                     document.onkeydown = function (e) {
@@ -3409,7 +3612,7 @@ var _wpcharts = (function (exports, d3) {
             this.pointIdMap = {};
             this.modelMap = {};
             this.lineMap = {};
-            this.legendManager = new LegendManager();
+            this.legendManager = new LegendManager(this.legendIndex);
             this.table.delete();
         };
         Chart.prototype.remove = function () {
@@ -3479,7 +3682,10 @@ var _wpcharts = (function (exports, d3) {
                             name: 'commonlyLegend',
                             color: warnColor[i],
                             generator: d3.symbol().type(d3.symbolStar),
-                            fill: false
+                            fill: false,
+                            width: 1,
+                            style: 'style1',
+                            legend: 'symbolStarHollow'
                         });
                         var commonlyNode = d3.select(selector + " .commonly-legend");
                         if (commonlyNode.size() > 0) {
@@ -3495,7 +3701,10 @@ var _wpcharts = (function (exports, d3) {
                             name: 'seriousLegend',
                             color: warnColor[i],
                             generator: d3.symbol().type(d3.symbolStar),
-                            fill: false
+                            fill: false,
+                            width: 1,
+                            style: 'style1',
+                            legend: 'symbolStarHollow'
                         });
                         var seriousNode = d3.select(selector + " .serious-legend");
                         if (seriousNode.size() > 0) {
@@ -3563,10 +3772,34 @@ var _wpcharts = (function (exports, d3) {
                 this.reset(newData);
             }
         };
+        Chart.prototype.findLineInfo = function (path) {
+            for (var _i = 0, path_1 = path; _i < path_1.length; _i++) {
+                var item = path_1[_i];
+                if (item.getAttribute && item.getAttribute("pointId")) {
+                    var pointId = item.getAttribute("pointId");
+                    var unit = item.getAttribute("unit");
+                    var legend = item.getAttribute("legend");
+                    return { pointId: pointId, unit: unit, legend: legend };
+                }
+            }
+            return null;
+        };
+        Chart.prototype.getChartType = function () {
+            return this.constructor.clazz;
+        };
+        Chart.prototype.isHydrograph = function () {
+            return this.getChartType() === 'hydrograph';
+        };
+        Chart.prototype.isDistribution = function () {
+            return this.getChartType() === 'distribution';
+        };
         Chart.prototype.isVerticalDistribution = function () {
             var clazz = this.constructor.clazz;
             var isVertical = !this.isHorizontal;
             return clazz === 'distribution' && isVertical;
+        };
+        Chart.prototype.set = function (key) {
+            console.log(111, key);
         };
         Chart.prototype.outputPreprocessing = function () {
             this.menu.hide();
@@ -4809,16 +5042,16 @@ var _wpcharts = (function (exports, d3) {
                             var idstr = table.field('Id', point);
                             idarr.push(idstr);
                         }
-                        var url_1 = 'http://119.57.135.180:9090/business/basic/datamanage/setEignoteByIds';
+                        var url_1 = '/business/basic/datamanage/setEignoteByIds';
                         var body_1 = { ids: idarr.join(','), operation: '' };
                         var request_1 = {
                             method: 'POST',
-                            body: '',
                             credentials: 'include',
                             mode: 'cors',
                             headers: {
                                 'Content-Type': 'application/x-www-form-urlencoded'
                             },
+                            body: '',
                         };
                         layui.layer.confirm('您是否要<span style="color: red">保存粗差</span>？', {
                             title: ['操作', 'font-size:18px;'],
@@ -4831,9 +5064,16 @@ var _wpcharts = (function (exports, d3) {
                                 fetch(url_1, request_1).then(function (response) {
                                     return response.text();
                                 }).then(function (data) {
-                                    console.log(11, data);
+                                    if (data) {
+                                        var result = JSON.parse(data);
+                                        Message.msg("<span style=\"color: white\">" + result.message + "</span>");
+                                    }
+                                    else {
+                                        Message.msg('数据已提交');
+                                    }
+                                    console.log('setEignoteByIds:', data);
                                 }).catch(function (error) {
-                                    console.error(12, error);
+                                    console.error('error-setEignoteByIds:', error);
                                 });
                             }
                             catch (e) {
@@ -4845,13 +5085,20 @@ var _wpcharts = (function (exports, d3) {
                         }, function (index) {
                             try {
                                 body_1.operation = 'Normal';
-                                request_1.body = JSON.stringify(body_1);
+                                request_1.body = formurlencoded(body_1);
                                 fetch(url_1, request_1).then(function (response) {
                                     return response.text();
                                 }).then(function (data) {
-                                    console.log(21, data);
+                                    if (data) {
+                                        var result = JSON.parse(data);
+                                        Message.msg("<span style=\"color: white\">" + result.message + "</span>");
+                                    }
+                                    else {
+                                        Message.msg('数据已提交');
+                                    }
+                                    console.log('setEignoteByIds:', data);
                                 }).catch(function (error) {
-                                    console.error(22, error);
+                                    console.error('error-setEignoteByIds:', error);
                                 });
                             }
                             catch (e) {
@@ -5105,43 +5352,6 @@ var _wpcharts = (function (exports, d3) {
         return Series;
     }(Component));
 
-    var LegendIndexNode = (function () {
-        function LegendIndexNode(index, legend) {
-            this.index = [];
-            this.index = __spreadArrays(index);
-            this.legend = legend;
-        }
-        LegendIndexNode.prototype.get = function (key) {
-            if (this.index.indexOf(key) > -1) {
-                return this.legend;
-            }
-            else {
-                return null;
-            }
-        };
-        return LegendIndexNode;
-    }());
-    var LegendIndex = (function () {
-        function LegendIndex(index) {
-            this.index = [];
-            if (index)
-                this.index = __spreadArrays(index);
-        }
-        LegendIndex.prototype.add = function (node) {
-            this.index.push(node);
-        };
-        LegendIndex.prototype.get = function (key) {
-            for (var _i = 0, _a = this.index; _i < _a.length; _i++) {
-                var node = _a[_i];
-                var legend = node.get(key);
-                if (legend)
-                    return legend;
-            }
-            return null;
-        };
-        return LegendIndex;
-    }());
-
     var Statistical = (function (_super) {
         __extends(Statistical, _super);
         function Statistical(selector) {
@@ -5163,25 +5373,37 @@ var _wpcharts = (function (exports, d3) {
                 name: 'solid_circle',
                 color: 'Blue',
                 generator: d3.symbol().type(d3.symbolCircle),
-                fill: true
+                fill: true,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolCircleSolid'
             })));
             _this.legendIndex.add(new LegendIndexNode(['计算值', '温度分量'], new Legend({
                 name: 'hollow_circle',
                 color: 'Red',
                 generator: d3.symbol().type(d3.symbolCircle),
-                fill: false
+                fill: false,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolCircleHollow'
             })));
             _this.legendIndex.add(new LegendIndexNode(['降雨分量'], new Legend({
                 name: 'solid_rect',
                 color: 'Green',
                 generator: d3.symbol().type(d3.symbolSquare),
-                fill: true
+                fill: true,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolSquareSolid'
             })));
             _this.legendIndex.add(new LegendIndexNode(['时效分量'], new Legend({
                 name: 'hollow_rect',
                 color: 'Black',
                 generator: d3.symbol().type(d3.symbolSquare),
-                fill: false
+                fill: false,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolSquareHollow'
             })));
             return _this;
         }
@@ -5866,7 +6088,10 @@ var _wpcharts = (function (exports, d3) {
                 name: 'solid_star',
                 color: 'Red',
                 generator: d3.symbol().type(d3.symbolStar),
-                fill: true
+                fill: true,
+                width: 1,
+                style: 'style1',
+                legend: 'symbolStarSolid'
             });
             line.draw(this.moveLineComponent, this.moveLineComponent, legendObject);
         };
@@ -6545,7 +6770,12 @@ var _wpcharts = (function (exports, d3) {
                 }
             }
             var chart = this.chart;
-            chart.setOption(option, callbacks);
+            chart.setOption(option, function () {
+                var _a;
+                setInstance((_a = chart) === null || _a === void 0 ? void 0 : _a.svg.id(), chart);
+                if (callbacks && typeof callbacks === "function")
+                    callbacks();
+            });
             return this;
         };
         WPCharts.prototype.outputSvg = function () {
@@ -6606,10 +6836,19 @@ var _wpcharts = (function (exports, d3) {
         console.log("wpcharts:", wpcharts);
         return wpcharts;
     }
+    function setInstance(id, chart) {
+        instance[id] = chart;
+    }
+    function getInstance(id) {
+        return instance[id];
+    }
+    var instance = {};
     var config$1 = mode;
 
     exports.config = config$1;
+    exports.getInstance = getInstance;
     exports.init = init$1;
+    exports.instance = instance;
 
     return exports;
 

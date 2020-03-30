@@ -591,7 +591,10 @@ export class Distribution extends Chart {
             name: 'solid_star',
             color: 'Red',
             generator: d3.symbol().type(d3.symbolStar),
-            fill: true
+            fill: true,
+            width: 1,
+            style: 'style1',
+            legend: 'symbolStarSolid'
         });
         line.draw(this.moveLineComponent, this.moveLineComponent, legendObject);
     }

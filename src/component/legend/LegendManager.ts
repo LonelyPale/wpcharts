@@ -1,18 +1,24 @@
-import d3 from "d3";
 import {Legend} from "./Legend";
+import {LegendIndex} from "./LegendIndex";
 
 export class LegendManager {
 
-    public static readonly legends: Legend[] = [];
-    private static readonly legendsMap: Record<string, Legend> = {};
-    private static readonly LegendSizeMax: number = 12;
+    private readonly legends: Legend[] = [];
+    private readonly legendsMap: Record<string, Legend> = {};
+    private readonly LegendSizeMax: number = 12;
 
     private readonly usedLegends: Record<string, Legend> = {};
     private readonly unusedLegends: Legend[] = [];
 
-    constructor() {
-        for (let i = 0; i < LegendManager.legends.length; i++) {
-            let legend: Legend = LegendManager.legends[i];
+    private readonly legendIndex: LegendIndex;
+
+    constructor(legendIndex: LegendIndex) {
+        this.legendIndex = legendIndex;
+        for(let i = 0; i < this.LegendSizeMax; i++) {
+            let legendIndexNode = legendIndex.index[i];
+            let legend = legendIndexNode.legend;
+            this.legends.push(legend);
+            this.legendsMap[legend.name] = legend;
             this.unusedLegends.push(legend);
         }
     }
@@ -32,7 +38,7 @@ export class LegendManager {
     remove(key: string): Legend {
         let legend = this.usedLegends[key];
         if (!legend) {
-            return LegendManager.legends[0];
+            return this.legends[0];
         }
         this.unusedLegends.push(legend);
         delete this.usedLegends[key];
@@ -47,98 +53,4 @@ export class LegendManager {
         return this.unusedLegends.length;
     }
 
-    /**
-     d3中有7个符号生成器。
-     symbolCircle 圆形
-     symbolCross 十字架
-     symbolDiamond 菱形
-     symbolSquare 正方形
-     symbolStar 五角星
-     symbolTriangle 三角形
-     symbolWye Y形
-     **/
-    static init() {
-        LegendManager.legends.push(new Legend({
-            name: 'solid_circle',
-            color: 'Blue',
-            generator: d3.symbol().type(d3.symbolCircle),
-            fill: true
-        })); //# 1
-        LegendManager.legends.push(new Legend({
-            name: 'hollow_circle',
-            color: '#996600',//Red
-            generator: d3.symbol().type(d3.symbolCircle),
-            fill: false
-        })); //# 2
-        LegendManager.legends.push(new Legend({
-            name: 'solid_rect',
-            color: 'Cyan',
-            generator: d3.symbol().type(d3.symbolSquare),
-            fill: true
-        })); //# 3
-        LegendManager.legends.push(new Legend({
-            name: 'hollow_rect',
-            color: '#6600FF',//Pink
-            generator: d3.symbol().type(d3.symbolSquare),
-            fill: false
-        })); //# 4
-        LegendManager.legends.push(new Legend({
-            name: 'solid_triangle',
-            color: 'Green',
-            generator: d3.symbol().type(d3.symbolTriangle),
-            fill: true
-        })); //# 5
-        LegendManager.legends.push(new Legend({
-            name: 'hollow_triangle',
-            color: 'Purple',
-            generator: d3.symbol().type(d3.symbolTriangle),
-            fill: false
-        })); //# 6
-        LegendManager.legends.push(new Legend({
-            name: 'solid_inverted_triangle',
-            color: 'LightBlue',
-            generator: d3.symbol().type(d3.symbolTriangle),
-            fill: true,
-            attribute: {transform: 'rotate(180)'}
-        })); //# 7
-        LegendManager.legends.push(new Legend({
-            name: 'hollow_inverted_triangle',
-            color: '#9999FF',//PaleVioletRed
-            generator: d3.symbol().type(d3.symbolTriangle),
-            fill: false,
-            attribute: {transform: 'rotate(180)'}
-        })); //# 8
-        LegendManager.legends.push(new Legend({
-            name: 'solid_rhombus',
-            color: 'SeaGreen',
-            generator: d3.symbol().type(d3.symbolDiamond),
-            fill: true
-        })); //# 9
-        LegendManager.legends.push(new Legend({
-            name: 'hollow_rhombus',
-            color: 'Yellow',
-            generator: d3.symbol().type(d3.symbolDiamond),
-            fill: false
-        })); //# 10
-        LegendManager.legends.push(new Legend({
-            name: 'solid_cross',
-            color: 'DarkCyan',
-            generator: d3.symbol().type(d3.symbolCross),
-            fill: true
-        })); //# 11
-        LegendManager.legends.push(new Legend({
-            name: 'hollow_cross',
-            color: 'DarkGoldenRod',
-            generator: d3.symbol().type(d3.symbolCross),
-            fill: false
-        })); //# 12
-
-        for (let i = 0; i < LegendManager.legends.length; i++) {
-            let legend: Legend = LegendManager.legends[i];
-            LegendManager.legendsMap[legend.name] = legend;
-        }
-    }
-
 }
-
-LegendManager.init();

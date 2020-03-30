@@ -12,7 +12,7 @@ let params = {
     wait: 1000, // Waits for all changes, before reloading. Defaults to 0 sec.
     mount: [['/wpcharts', '.']], // Mount a directory to a route.
     logLevel: 2, // 0 = errors only, 1 = some, 2 = lots
-    middleware: [apiImageConfigRoute, mockRoute, setEignoteByIds] // Takes an array of Connect-compatible middleware that are injected into the server middleware stack
+    middleware: [apiImageConfigRoute, mockRoute, setEignoteByIds, getColor] // Takes an array of Connect-compatible middleware that are injected into the server middleware stack
 };
 
 liveServer.start(params);
@@ -54,7 +54,32 @@ function setEignoteByIds(req, res, next) {
     let {pathname, query} = req._parsedUrl;
     if (pathname === '/business/basic/datamanage/setEignoteByIds') {
         console.log(req.body);
-        return res.end('ok');
+        return res.end('{"code":200,"message":"数据请求成功"}');
+        //return res.end('{"code":500,"message":"数据参数不合理"}');
+    }
+    next();
+}
+
+function getColor(req, res, next) {
+    let {pathname, query} = req._parsedUrl;
+    if (pathname === '/business/graph/getColor') {
+        console.log(req.body);
+        let result = '{\n' +
+            '    "cname": "",\n' +
+            '    "code": "",\n' +
+            '    "fieldMapName": null,\n' +
+            '    "gratype": "",\n' +
+            '    "id": "",\n' +
+            '    "isvisible": "",\n' +
+            '    "name": "",\n' +
+            '    "orderBy": "",\n' +
+            '    "orgid": "010000",\n' +
+            '    "orgname": "中线局",\n' +
+            '    "pkName": "id",\n' +
+            '    "setjson": "{\\"type\\":\\"hydrograph\\",\\"lines\\":[{\\"color\\":\\"#FFCC33\\",\\"legend\\":\\"solid_circle\\",\\"id\\":1},{\\"color\\":\\"#996600\\",\\"legend\\":\\"hollow_circle\\",\\"id\\":2},{\\"color\\":\\"#FFCC33\\",\\"legend\\":\\"solid_rect\\",\\"id\\":3},{\\"color\\":\\"#6600FF\\",\\"legend\\":\\"hollow_rect\\",\\"id\\":4},{\\"color\\":\\"#FFCC33\\",\\"legend\\":\\"solid_triangle\\",\\"id\\":5},{\\"color\\":\\"#FFCC33\\",\\"legend\\":\\"hollow_triangle\\",\\"id\\":6},{\\"color\\":\\"#FFCC33\\",\\"legend\\":\\"solid_inverted_triangle\\",\\"id\\":7},{\\"color\\":\\"#9999FF\\",\\"legend\\":\\"hollow_inverted_triangle\\",\\"id\\":8},{\\"color\\":\\"#FFCC33\\",\\"legend\\":\\"solid_rhombus\\",\\"id\\":9},{\\"color\\":\\"#FFCC33\\",\\"legend\\":\\"hollow_rhombus\\",\\"id\\":10},{\\"color\\":\\"#FFCC33\\",\\"legend\\":\\"solid_cross\\",\\"id\\":11},{\\"color\\":\\"#FFCC33\\",\\"legend\\":\\"hollow_cross\\",\\"id\\":12}]}",\n' +
+            '    "valMap": null\n' +
+            '}';
+        return res.end(result);
     }
     next();
 }

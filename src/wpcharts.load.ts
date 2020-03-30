@@ -128,6 +128,10 @@ function finish() {
     ready.init = window._wpcharts.init;
     // @ts-ignore
     ready.config = window._wpcharts.config;
+    // @ts-ignore
+    ready.instance = window._wpcharts.instance;
+    // @ts-ignore
+    ready.getInstance = window._wpcharts.getInstance;
 
     for (let i = 0; i < hookCallbacks.length; i++) {
         let callback = hookCallbacks[i];

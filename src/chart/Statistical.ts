@@ -39,25 +39,37 @@ export class Statistical extends Chart {
             name: 'solid_circle',
             color: 'Blue',
             generator: d3.symbol().type(d3.symbolCircle),
-            fill: true
+            fill: true,
+            width: 1,
+            style: 'style1',
+            legend: 'symbolCircleSolid'
         })));
         this.legendIndex.add(new LegendIndexNode(['计算值', '温度分量'], new Legend({
             name: 'hollow_circle',
             color: 'Red',
             generator: d3.symbol().type(d3.symbolCircle),
-            fill: false
+            fill: false,
+            width: 1,
+            style: 'style1',
+            legend: 'symbolCircleHollow'
         })));
         this.legendIndex.add(new LegendIndexNode(['降雨分量'], new Legend({
             name: 'solid_rect',
             color: 'Green',
             generator: d3.symbol().type(d3.symbolSquare),
-            fill: true
+            fill: true,
+            width: 1,
+            style: 'style1',
+            legend: 'symbolSquareSolid'
         })));
         this.legendIndex.add(new LegendIndexNode(['时效分量'], new Legend({
             name: 'hollow_rect',
             color: 'Black',
             generator: d3.symbol().type(d3.symbolSquare),
-            fill: false
+            fill: false,
+            width: 1,
+            style: 'style1',
+            legend: 'symbolSquareHollow'
         })));
     }
 

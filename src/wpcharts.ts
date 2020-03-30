@@ -26,7 +26,7 @@ class WPCharts {
         this.chart = null;
     }
 
-    setOption(option: IOption, callbacks?: () => {}): this {
+    setOption(option: IOption, callbacks?: () => void): this {
         if (!this.chart) {
             const type: string = option.type;
             if (!!type) {
@@ -46,7 +46,11 @@ class WPCharts {
 
         //this.chart.setOption(option); //# 联合变量类型保护
         //(<IChart>this.chart).setOption(option); //# 联合变量类型保护
-        chart.setOption(option, callbacks);
+
+        chart.setOption(option, () => {
+            setInstance(chart?.svg.id(), chart); //缓存实例
+            if (callbacks && typeof callbacks === "function") callbacks();
+        });
 
         return this;
     }
@@ -113,5 +117,15 @@ export function init(selector: string, globalConfigOption?: GlobalConfigOption) 
     console.log("wpcharts:", wpcharts);
     return wpcharts;
 }
+
+function setInstance(id: string, chart: IChart) {
+    instance[id] = chart;
+}
+
+export function getInstance(id: string): IChart {
+    return instance[id];
+}
+
+export const instance: {[key:string]: IChart} = {}; //缓存实例
 
 export const config = conf;

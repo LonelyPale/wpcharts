@@ -7,16 +7,22 @@ import {Text} from "../../svg/Text";
 import {Line} from "../../svg/Line";
 import {Title} from "../../svg/Title";
 import {G} from "../../svg/G";
+import {LineLegendType, LineStyleType} from "../../object/LineSet";
 
-type Symbol = d3.Symbol<any, any>;
+export type Symbol = d3.Symbol<any, any>;
 
 interface LegendAttribute {
     name: string;
-    color: string;
     generator: Symbol;
     fill: boolean;
     attribute?: SvgAttribute;
     clazz?: string;
+
+    //# extend
+    color: string;
+    width: number;
+    style: LineStyleType;
+    legend: LineLegendType;
 }
 
 export class Legend {
@@ -25,21 +31,30 @@ export class Legend {
     static readonly DefaultStrokeWidth: number = 1;
 
     readonly name: string;
-    readonly color: string;
     readonly generator: Symbol;
     readonly fill: boolean;
     readonly attribute: SvgAttribute;
     readonly clazz?: string;
 
-    constructor(legend: LegendAttribute) {
-        let {name, color, generator, fill, attribute, clazz} = legend;
+    //# extend
+    readonly color: string;
+    readonly width: number;
+    readonly style: LineStyleType;
+    readonly legend: LineLegendType;
+
+    constructor(legendAttribute: LegendAttribute) {
+        let {name, generator, fill, attribute, clazz, color, width, style, legend} = legendAttribute;
         this.name = name;
-        this.color = color;
         this.generator = generator;
         this.fill = fill;
         this.attribute = attribute || {};
-
         if (clazz) this.clazz = clazz;
+
+        //# extend
+        this.color = color || '#000000';
+        this.width = width || 1;
+        this.style = style || 'style1';
+        this.legend = legend || 'symbolCircleSolid';
 
         //初始化默认属性
         this.attribute['d'] = <string>this.generator.size(Legend.DefaultLegendSize)();
